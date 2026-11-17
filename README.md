@@ -1,6 +1,6 @@
 # decker-plugins
 
-Plugins for [Decker](https://github.com/valsr/Decker) and the tooling that tests, packages and publishes them. Packages
+Plugins for [Decker](https://github.com/valsr/decker) and the tooling that tests, packages and publishes them. Packages
 are GitHub Releases, the index is served by GitHub Pages at <https://valsr.github.io/decker-plugins/index.json>.
 
 ## Add this repository to Decker
