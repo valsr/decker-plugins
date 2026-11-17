@@ -68,3 +68,21 @@ def test_check_versions_compares_numerically(git_repo: Path) -> None:
     git(git_repo, "commit", "-q", "-am", "bump")
 
     assert_that(check_versions(git_repo, "main")).is_empty()
+
+
+def test_check_versions_rejects_semver_that_packaging_cannot_parse(git_repo: Path) -> None:
+    _bump(git_repo, "1.0.0-foo")
+    git(git_repo, "commit", "-q", "-am", "bad")
+
+    errors = check_versions(git_repo, "main")
+
+    assert_that(errors).is_length(1)
+    assert_that(errors[0]).contains("1.0.0-foo").contains("PEP 440")
+
+
+def test_check_versions_ignores_unparseable_tags(git_repo: Path) -> None:
+    git(git_repo, "tag", "com.example.demo-v1.0.0-foo")
+    _bump(git_repo, "1.0.1")
+    git(git_repo, "commit", "-q", "-am", "bump")
+
+    assert_that(check_versions(git_repo, "main")).is_empty()

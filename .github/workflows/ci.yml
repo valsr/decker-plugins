@@ -3,6 +3,7 @@ name: CI
 on:
   pull_request:
   push:
+    branches: [main]
 
 jobs:
   test:
@@ -33,11 +34,13 @@ jobs:
           exit $status
       - name: Check versions
         if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "${{ github.base_ref }}"
-          uv run python tools/check_versions.py "origin/${{ github.base_ref }}"
+          git fetch origin "$BASE_REF"
+          uv run python -m tools.check_versions "origin/$BASE_REF"
       - name: Pack
-        run: uv run python tools/pack_all.py --out dist
+        run: uv run python -m tools.pack_all --out dist
       - uses: actions/upload-artifact@v4
         with:
           name: packages

@@ -5,18 +5,16 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
-
 concurrency:
   group: publish
   cancel-in-progress: false
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -27,31 +25,32 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - name: Pack all plugins
-        run: uv run python tools/pack_all.py --out dist
+        run: uv run python -m tools.pack_all --out dist > packages.txt
       - name: Create releases for versions that have none (existing releases are never touched)
         run: |
-          for package in dist/*.deckerplugin; do
-            name="$(basename "$package" .deckerplugin)"   # <id>-<version>
-            version="${name##*-}"
-            plugin_id="${name%-*}"
+          while read -r plugin_id version package; do
             tag="${plugin_id}-v${version}"
             if gh release view "$tag" >/dev/null 2>&1; then
               echo "release $tag exists, skipping"
               continue
             fi
-            uv run python tools/release_meta.py "$package"
+            uv run python -m tools.release_meta "$package"
             gh release create "$tag" "$package" "${package}.json" \
               --target "$GITHUB_SHA" --title "$plugin_id $version" --notes "Release of $plugin_id $version."
-          done
+          done < packages.txt
       - name: Download every release sidecar
         run: |
           mkdir -p sidecars
-          gh release list --limit 1000 --json tagName --jq '.[].tagName' | while read -r tag; do
-            gh release download "$tag" --pattern '*.json' --dir "sidecars/$tag" \
-              || echo "release $tag has no sidecar, ignoring it"
-          done
+          while read -r tag; do
+            count="$(gh release view "$tag" --json assets --jq '[.assets[].name | select(endswith(".json"))] | length')"
+            if [ "$count" -eq 0 ]; then
+              echo "release $tag has no sidecar, ignoring it"
+              continue
+            fi
+            gh release download "$tag" --pattern '*.json' --dir "sidecars/$tag"
+          done < <(gh release list --limit 1000 --json tagName --jq '.[].tagName')
       - name: Build the site
-        run: uv run python tools/build_index.py --sidecars sidecars --out site
+        run: uv run python -m tools.build_index --sidecars sidecars --out site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -59,6 +58,9 @@ jobs:
   deploy:
     needs: release
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

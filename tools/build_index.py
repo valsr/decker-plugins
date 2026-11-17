@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from packaging.version import Version
+from tools.versioning import parse_plugin_version
 
 INDEX_NAME = "Decker Plugins"
 
@@ -31,6 +31,11 @@ def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path,
     grouped: dict[str, list[dict[str, Any]]] = {}
     for entry in entries:
         version = {key: value for key, value in entry.items() if key != "id"}
+        try:
+            parse_plugin_version(version.get("version"))
+        except ValueError as exc:
+            print(f"warning: skipping {entry['id']} entry: {exc}", file=sys.stderr)
+            continue
         grouped.setdefault(entry["id"], []).append(version)
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -51,7 +56,7 @@ def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path,
             (out_dir / "icons").mkdir(exist_ok=True)
             shutil.copyfile(icon, out_dir / "icons" / f"{plugin_id}.png")
             plugin["icon"] = f"icons/{plugin_id}.png"
-        plugin["versions"] = sorted(grouped[plugin_id], key=lambda v: Version(v["version"]), reverse=True)
+        plugin["versions"] = sorted(grouped[plugin_id], key=lambda v: parse_plugin_version(v["version"]), reverse=True)
         plugins.append(plugin)
 
     index = {

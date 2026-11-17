@@ -53,3 +53,14 @@ def test_build_index_skips_plugin_without_manifest(tmp_path: Path) -> None:
     index_path = build_index([entry], tmp_path / "plugins", tmp_path / "site")
 
     assert_that(json.loads(index_path.read_text(encoding="utf-8"))["plugins"]).is_empty()
+
+
+def test_build_index_skips_unparseable_version_with_warning(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+    good = _counter_entry(tmp_path)
+    bad = {**good, "version": "1.0.0-foo"}
+
+    index_path = build_index([good, bad], PLUGINS, tmp_path / "site")
+
+    versions = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["versions"]
+    assert_that([v["version"] for v in versions]).is_equal_to(["1.0.0"])
+    assert_that(capsys.readouterr().err).contains("1.0.0-foo")

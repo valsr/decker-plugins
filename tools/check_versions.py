@@ -6,8 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-from decker.plugin.manifest import is_valid_version
-from packaging.version import InvalidVersion, Version
+from packaging.version import Version
+
+from tools.versioning import parse_plugin_version
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -31,8 +32,10 @@ def _highest_tag(repo: Path, plugin_id: str) -> Version | None:
     versions = []
     for tag in _git(repo, "tag", "--list", f"{prefix}*").splitlines():
         text = tag.removeprefix(prefix)
-        if is_valid_version(text):
-            versions.append(Version(text))
+        try:
+            versions.append(parse_plugin_version(text))
+        except ValueError:
+            continue  # not a release tag of ours
     return max(versions, default=None)
 
 
@@ -53,13 +56,10 @@ def check_versions(repo: Path, base_ref: str) -> list[str]:
             errors.append(f"{folder}: manifest id {plugin_id!r} does not match the folder name")
             continue
         text = data.get("version")
-        if not is_valid_version(text):
-            errors.append(f"{folder}: manifest version {text!r} is not a semantic version (x.y.z)")
-            continue
         try:
-            current = Version(text)
-        except InvalidVersion:  # pragma: no cover - is_valid_version already guards this
-            errors.append(f"{folder}: manifest version {text!r} is invalid")
+            current = parse_plugin_version(text)
+        except ValueError as exc:
+            errors.append(f"{folder}: manifest version: {exc}")
             continue
         latest = _highest_tag(repo, plugin_id)
         if latest is not None and current <= latest:
