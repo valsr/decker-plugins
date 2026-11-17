@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "id": "com.decker.fontawesome",
+  "name": "Fontawesome Icons",
+  "version": "7.3.1",
+  "author": "valsr",
+  "description": "Font Awesome Free icons (brands, regular and solid).",
+  "homepage": "https://fontawesome.com/",
+  "icon": "brands/font-awesome",
+  "category": "Icons",
+  "decker": ">=0.2",
+  "contributes": {
+    "icon_packs": [
+      { "id": "com.decker.fontawesome.brands", "name": "Brands Icons", "path": "brands" },
+      { "id": "com.decker.fontawesome.regular", "name": "Regular Icons", "path": "regular" },
+      { "id": "com.decker.fontawesome.solid", "name": "Solid Icons", "path": "solid" }
+    ]
+  }
+}
