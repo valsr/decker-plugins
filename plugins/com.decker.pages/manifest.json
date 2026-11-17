@@ -2,13 +2,13 @@
   "format": 1,
   "id": "com.decker.pages",
   "name": "Pages",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Decker",
   "description": "Keys for moving between a device's pages, and ready-made page indicators.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/pages",
   "category": "Utilities",
-  "decker": ">=0.4",
+  "decker": ">=0.5",
   "runtime": { "type": "python", "entry": "plugin.py" },
   "contributes": {
     "actions": [
@@ -39,12 +39,13 @@
       {
         "id": "com.decker.pages.goto",
         "name": "Go to page",
-        "tooltip": "Go to a chosen page",
+        "tooltip": "Go to a chosen page, in this or another profile",
         "icon": "icons/pages",
         "gestures": ["press"],
         "appearance": { "background": "#000000" },
         "settings": [
-          { "key": "page", "type": "page", "label": "Page" }
+          { "key": "profile", "type": "profile", "label": "Profile" },
+          { "key": "page", "type": "page", "label": "Page", "profile_field": "profile" }
         ]
       },
       {
