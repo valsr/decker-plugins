@@ -27,13 +27,13 @@ def _fields(spec) -> dict[str, SettingField]:
     return {f.key: f for f in spec.settings if isinstance(f, SettingField)}
 
 
-def test_manifest_is_valid_and_gated_on_0_4(manifest: PluginManifest) -> None:
+def test_manifest_is_valid_and_gated_on_0_5(manifest: PluginManifest) -> None:
     assert_that(manifest.id).is_equal_to(_PLUGIN_ID)
     assert_that(manifest.name).is_equal_to("Pages")
-    assert_that(manifest.version).is_equal_to("1.0.0")
-    assert_that(manifest.decker).is_equal_to(">=0.4")
-    assert_that(is_compatible(">=0.4", "0.3.0")).is_false()
-    assert_that(is_compatible(manifest.decker, "0.4.0")).is_true()
+    assert_that(manifest.version).is_equal_to("1.1.0")
+    assert_that(manifest.decker).is_equal_to(">=0.5")
+    assert_that(is_compatible(manifest.decker, "0.4.0")).is_false()
+    assert_that(is_compatible(manifest.decker, "0.5.0")).is_true()
     assert_that(manifest.runtime).is_not_none()
     assert_that(manifest.runtime.requirements).is_empty()  # type: ignore[union-attr]
 
@@ -61,7 +61,10 @@ def test_runtime_action_settings(manifest: PluginManifest) -> None:
         assert_that(fields["color"].extra["alpha"]).is_true()
         assert_that(fields["color"].default).is_equal_to("#ffffff")
     goto = _fields(specs["com.decker.pages.goto"])
-    assert_that([(k, f.type) for k, f in goto.items()]).is_equal_to([("page", "page")])
+    assert_that([(k, f.type, f.default) for k, f in goto.items()]).is_equal_to(
+        [("profile", "profile", ""), ("page", "page", "")]
+    )
+    assert_that(goto["page"].extra["profile_field"]).is_equal_to("profile")
 
 
 def test_presets_are_static_with_templated_title_defaults(manifest: PluginManifest) -> None:

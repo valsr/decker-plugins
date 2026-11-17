@@ -1,0 +1,4 @@
+caret-left.svg and caret-right.svg are unmodified icons from Font Awesome Free 7.3.1
+(https://fontawesome.com), Copyright 2026 Fonticons, Inc.
+Icons: CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)
+License: https://fontawesome.com/license/free
