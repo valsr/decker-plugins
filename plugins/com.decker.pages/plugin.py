@@ -81,6 +81,33 @@ class PreviousAction(ArrowAction):
     ink = (0, 95, 193, 416)
 
 
+def _chosen_page(settings: dict[str, Any]) -> tuple[str, str]:
+    """(page id, page name) of the ``page`` setting, or ("", "") for none, a deleted page or garbage."""
+    value = settings.get("page")
+    if not isinstance(value, dict):
+        return "", ""
+    page_id, name = value.get("page_id"), value.get("name")
+    if not isinstance(page_id, str) or not page_id:
+        return "", ""
+    return page_id, name if isinstance(name, str) else ""
+
+
 @action("com.decker.pages.goto")
 class GotoAction(DeckerPlugin):
-    """Go to a chosen page."""
+    """Titled "Go To <page name>"; a press goes to the chosen page."""
+
+    def on_will_appear(self, ctx: ActionContext) -> None:
+        self._title(ctx)
+
+    def on_settings_changed(self, ctx: ActionContext) -> None:
+        self._title(ctx)
+
+    def on_press(self, ctx: ActionContext) -> None:
+        page_id, _name = _chosen_page(ctx.settings)
+        if page_id:
+            ctx.go_to_page(page_id)
+
+    @staticmethod
+    def _title(ctx: ActionContext) -> None:
+        page_id, name = _chosen_page(ctx.settings)
+        ctx.set_title(f"Go To {name}" if page_id and name else "")

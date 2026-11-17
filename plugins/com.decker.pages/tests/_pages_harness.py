@@ -67,6 +67,21 @@ class Harness:
             if message["event"] == event:
                 return message
 
+    def collect_settled(self) -> list[dict]:
+        """Every message the plugin sent for earlier events.
+
+        Events of one key are handled in order on a queue, so a final settings change that makes a Go To key
+        send a recognisable title is a barrier: once it arrives, nothing earlier is still on its way.
+        """
+        sentinel = {"page": {"page_id": "sentinel", "name": "SENTINEL", "index": 1}}
+        self.change(sentinel)
+        seen: list[dict] = []
+        while True:
+            message = self.recv()
+            if message["event"] == "set_title" and message["payload"]["title"] == "Go To SENTINEL":
+                return seen
+            seen.append(message)
+
     def appear(self, settings: dict[str, Any]) -> None:
         self.send(
             "will_appear",
