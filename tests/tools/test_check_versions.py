@@ -86,3 +86,43 @@ def test_check_versions_ignores_unparseable_tags(git_repo: Path) -> None:
     git(git_repo, "commit", "-q", "-am", "bump")
 
     assert_that(check_versions(git_repo, "main")).is_empty()
+
+
+def test_check_versions_ignores_changes_under_tests(git_repo: Path) -> None:
+    tests_dir = git_repo / "plugins" / "com.example.demo" / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_a.py").write_text("def test_a(): pass\n", encoding="utf-8")
+    git(git_repo, "add", "-A")
+    git(git_repo, "commit", "-q", "-m", "tests only")
+
+    assert_that(check_versions(git_repo, "main")).is_empty()
+
+
+def test_check_versions_still_flags_tests_plus_packaged_change(git_repo: Path) -> None:
+    tests_dir = git_repo / "plugins" / "com.example.demo" / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_a.py").write_text("def test_a(): pass\n", encoding="utf-8")
+    _commit_change(git_repo)
+
+    assert_that(check_versions(git_repo, "main")).is_length(1)
+
+
+def test_check_versions_on_push_compares_with_previous_commit(git_repo: Path) -> None:
+    git(git_repo, "checkout", "-q", "main")
+    git(git_repo, "merge", "-q", "--ff-only", "HEAD")
+    previous = git(git_repo, "rev-parse", "HEAD").strip()
+    _commit_change(git_repo)
+
+    errors = check_versions(git_repo, previous)
+
+    assert_that(errors).is_length(1)
+    assert_that(errors[0]).contains("com.example.demo")
+
+
+def test_check_versions_ignores_the_release_tag_on_head(git_repo: Path) -> None:
+    _commit_change(git_repo)
+    _bump(git_repo, "1.0.1")
+    git(git_repo, "commit", "-q", "-am", "bump")
+    git(git_repo, "tag", "com.example.demo-v1.0.1")  # publish already released this commit
+
+    assert_that(check_versions(git_repo, "main")).is_empty()

@@ -22,7 +22,7 @@ def _changed_plugins(repo: Path, base_ref: str) -> list[str]:
     for diff in ((f"{base_ref}...HEAD",), ("HEAD",)):
         for line in _git(repo, "diff", "--name-only", *diff, "--", "plugins").splitlines():
             parts = line.split("/")
-            if len(parts) > 2:
+            if len(parts) > 2 and parts[2] != "tests":  # tests are not packaged
                 names.add(parts[1])
     return sorted(names)
 
@@ -30,7 +30,11 @@ def _changed_plugins(repo: Path, base_ref: str) -> list[str]:
 def _highest_tag(repo: Path, plugin_id: str) -> Version | None:
     prefix = f"{plugin_id}-v"
     versions = []
+    # A tag on HEAD is this very commit's own release (publish may have run before this check), not a prior one.
+    own = set(_git(repo, "tag", "--list", "--points-at", "HEAD", f"{prefix}*").splitlines())
     for tag in _git(repo, "tag", "--list", f"{prefix}*").splitlines():
+        if tag in own:
+            continue
         text = tag.removeprefix(prefix)
         try:
             versions.append(parse_plugin_version(text))

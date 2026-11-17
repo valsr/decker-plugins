@@ -32,13 +32,25 @@ jobs:
             fi
           done
           exit $status
-      - name: Check versions
+      - name: Check versions (pull request)
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
           git fetch origin "$BASE_REF"
           uv run python -m tools.check_versions "origin/$BASE_REF"
+      - name: Check versions (push to main)
+        if: github.event_name == 'push'
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # An unbumped change pushed straight to main is never republished, so fail loudly here.
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            uv run python -m tools.check_versions "$BEFORE"
+          else
+            echo "no previous commit to compare against, skipping"
+          fi
       - name: Pack
         run: uv run python -m tools.pack_all --out dist
       - uses: actions/upload-artifact@v4
