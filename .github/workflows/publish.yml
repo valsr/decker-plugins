@@ -40,7 +40,13 @@ jobs:
           done < packages.txt
       - name: Download every release sidecar
         run: |
+          set -euo pipefail
           mkdir -p sidecars
+          gh release list --limit 1000 --json tagName --jq '.[].tagName' > tags.txt
+          if [ ! -s tags.txt ]; then
+            echo "::error::no releases found, refusing to deploy an empty index"
+            exit 1
+          fi
           while read -r tag; do
             count="$(gh release view "$tag" --json assets --jq '[.assets[].name | select(endswith(".json"))] | length')"
             if [ "$count" -eq 0 ]; then
@@ -48,7 +54,7 @@ jobs:
               continue
             fi
             gh release download "$tag" --pattern '*.json' --dir "sidecars/$tag"
-          done < <(gh release list --limit 1000 --json tagName --jq '.[].tagName')
+          done < tags.txt
       - name: Build the site
         run: uv run python -m tools.build_index --sidecars sidecars --out site
       - uses: actions/upload-pages-artifact@v3

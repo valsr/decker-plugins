@@ -8,3 +8,5 @@ site/
 sidecars/
 *.deckerplugin
 *.deckerplugin.json
+tags.txt
+packages.txt
