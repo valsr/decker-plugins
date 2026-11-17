@@ -1,14 +1,18 @@
 import json
+import tempfile
 from pathlib import Path
 
 from assertpy import assert_that
 from decker.plugin.repository_index import parse_index
+from PIL import Image
 
 from tools.build_index import build_index
 from tools.pack_all import pack_all
 from tools.release_meta import version_entry
 
-from .conftest import PLUGINS, write_plugin
+from .conftest import COUNTER, PLUGINS, write_plugin
+
+COUNTER_ICON = COUNTER / "icons" / "counter.png"
 
 
 def _counter_entry(tmp_path: Path) -> dict:
@@ -64,3 +68,84 @@ def test_build_index_skips_unparseable_version_with_warning(tmp_path: Path, caps
     versions = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["versions"]
     assert_that([v["version"] for v in versions]).is_equal_to(["1.0.0"])
     assert_that(capsys.readouterr().err).contains("1.0.0-foo")
+
+
+_SQUARE_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="red"/></svg>'
+)
+
+
+def _icon_plugin(tmp_path: Path, icon: str, files: dict[str, bytes]) -> tuple[Path, dict]:
+    plugins = tmp_path / "plugins"
+    folder = write_plugin(plugins, "com.example.demo", "1.0.0")
+    manifest_path = folder / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["icon"] = icon
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    for name, data in files.items():
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        (folder / name).write_bytes(data)
+    return plugins, {"id": "com.example.demo", "version": "1.0.0"}
+
+
+def _built_icon(site: Path) -> Image.Image:
+    return Image.open(site / "icons" / "com.example.demo.png")
+
+
+def test_svg_manifest_icon_is_rendered_to_png(tmp_path: Path) -> None:
+    plugins, entry = _icon_plugin(tmp_path, "brands/mark", {"brands/mark.svg": _SQUARE_SVG.encode()})
+
+    index_path = build_index([entry], plugins, tmp_path / "site")
+
+    image = _built_icon(tmp_path / "site")
+    assert_that(image.format).is_equal_to("PNG")
+    assert_that(image.size).is_equal_to((256, 256))
+    assert_that(image.convert("RGBA").getpixel((128, 128))).is_equal_to((255, 0, 0, 255))
+    plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
+    assert_that(plugin["icon"]).is_equal_to("icons/com.example.demo.png")
+
+
+def test_svg_icon_path_with_extension_is_supported(tmp_path: Path) -> None:
+    plugins, entry = _icon_plugin(tmp_path, "mark.svg", {"mark.svg": _SQUARE_SVG.encode()})
+
+    build_index([entry], plugins, tmp_path / "site")
+
+    assert_that(_built_icon(tmp_path / "site").format).is_equal_to("PNG")
+
+
+def test_png_manifest_icon_is_copied_unchanged() -> None:
+    source = COUNTER_ICON.read_bytes()
+    out = Path(tempfile.mkdtemp())
+    build_index([_counter_entry(out)], PLUGINS, out / "site")
+
+    assert_that((out / "site" / "icons" / "com.decker.counter.png").read_bytes()).is_equal_to(source)
+
+
+def test_unrenderable_svg_is_skipped_with_warning(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+    plugins, entry = _icon_plugin(tmp_path, "mark", {"mark.svg": b"<svg xmlns='http://www.w3.org/2000/svg'><"})
+
+    index_path = build_index([entry], plugins, tmp_path / "site")
+
+    plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
+    assert_that(plugin).does_not_contain_key("icon")
+    assert_that((tmp_path / "site" / "icons" / "com.example.demo.png").exists()).is_false()
+    assert_that(capsys.readouterr().err).contains("icon").contains("com.example.demo")
+
+
+def test_missing_icon_file_is_omitted(tmp_path: Path) -> None:
+    plugins, entry = _icon_plugin(tmp_path, "nowhere", {})
+
+    index_path = build_index([entry], plugins, tmp_path / "site")
+
+    assert_that(json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]).does_not_contain_key("icon")
+
+
+def test_fontawesome_gets_an_index_icon(tmp_path: Path) -> None:
+    entry = {"id": "com.decker.fontawesome", "version": "7.3.1"}
+
+    index_path = build_index([entry], PLUGINS, tmp_path / "site")
+
+    plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
+    assert_that(plugin["name"]).is_equal_to("Fontawesome Icons")
+    assert_that(plugin["icon"]).is_equal_to("icons/com.decker.fontawesome.png")
+    assert_that(Image.open(tmp_path / "site" / "icons" / "com.decker.fontawesome.png").format).is_equal_to("PNG")

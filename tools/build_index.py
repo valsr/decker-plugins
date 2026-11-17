@@ -8,18 +8,35 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from decker.asset.renderer import AssetRenderer
+
 from tools.versioning import parse_plugin_version
 
 INDEX_NAME = "Decker Plugins"
+ICON_SIZE = 256  # px; the rendered size of an SVG manifest icon
 
 
 def _icon_source(folder: Path, icon: str | None) -> Path | None:
     if not icon:
         return None
-    for candidate in (folder / icon, folder / f"{icon}.png"):
+    for candidate in (folder / icon, folder / f"{icon}.png", folder / f"{icon}.svg"):
         if candidate.is_file():
             return candidate
     return None
+
+
+def _write_icon(source: Path, destination: Path, plugin_id: str) -> bool:
+    """Write `destination` as a PNG: an SVG source is rendered at ICON_SIZE, a PNG source is copied unchanged."""
+    try:
+        if source.suffix.lower() == ".svg":
+            AssetRenderer().render_path(source, ICON_SIZE, ICON_SIZE).save(destination, format="PNG")
+        else:
+            shutil.copyfile(source, destination)
+    except Exception as exc:  # noqa: BLE001  (a broken icon must not stop the index being built)
+        print(f"warning: skipping the icon of {plugin_id}: {exc}", file=sys.stderr)
+        destination.unlink(missing_ok=True)
+        return False
+    return True
 
 
 def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path, generated: str | None = None) -> Path:
@@ -54,8 +71,8 @@ def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path,
         icon = _icon_source(folder, manifest.get("icon"))
         if icon is not None:
             (out_dir / "icons").mkdir(exist_ok=True)
-            shutil.copyfile(icon, out_dir / "icons" / f"{plugin_id}.png")
-            plugin["icon"] = f"icons/{plugin_id}.png"
+            if _write_icon(icon, out_dir / "icons" / f"{plugin_id}.png", plugin_id):
+                plugin["icon"] = f"icons/{plugin_id}.png"
         plugin["versions"] = sorted(grouped[plugin_id], key=lambda v: parse_plugin_version(v["version"]), reverse=True)
         plugins.append(plugin)
 
