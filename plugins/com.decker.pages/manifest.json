@@ -1,0 +1,68 @@
+{
+  "format": 1,
+  "id": "com.decker.pages",
+  "name": "Pages",
+  "version": "1.0.0",
+  "author": "Decker",
+  "description": "Keys for moving between a device's pages, and ready-made page indicators.",
+  "homepage": "https://github.com/valsr/decker-plugins",
+  "icon": "icons/pages",
+  "category": "Utilities",
+  "decker": ">=0.4",
+  "runtime": { "type": "python", "entry": "plugin.py" },
+  "contributes": {
+    "actions": [
+      {
+        "id": "com.decker.pages.next",
+        "name": "Next page",
+        "tooltip": "Go to the next page",
+        "icon": "icons/pages",
+        "gestures": ["press"],
+        "appearance": { "background": "#000000" },
+        "settings": [
+          { "key": "wrap", "type": "bool", "label": "Wrap around", "default": false },
+          { "key": "color", "type": "color", "label": "Icon colour", "default": "#ffffff", "alpha": true }
+        ]
+      },
+      {
+        "id": "com.decker.pages.previous",
+        "name": "Previous page",
+        "tooltip": "Go to the previous page",
+        "icon": "icons/pages",
+        "gestures": ["press"],
+        "appearance": { "background": "#000000" },
+        "settings": [
+          { "key": "wrap", "type": "bool", "label": "Wrap around", "default": false },
+          { "key": "color", "type": "color", "label": "Icon colour", "default": "#ffffff", "alpha": true }
+        ]
+      },
+      {
+        "id": "com.decker.pages.goto",
+        "name": "Go to page",
+        "tooltip": "Go to a chosen page",
+        "icon": "icons/pages",
+        "gestures": ["press"],
+        "appearance": { "background": "#000000" },
+        "settings": [
+          { "key": "page", "type": "page", "label": "Page" }
+        ]
+      },
+      {
+        "id": "com.decker.pages.indicator",
+        "name": "Page indicator",
+        "tooltip": "Shows the page number, like 2 / 5",
+        "icon": "icons/pages",
+        "static": true,
+        "appearance": { "title": { "text": "{page_index} / {page_count}", "position": "middle", "size": 24 } }
+      },
+      {
+        "id": "com.decker.pages.name",
+        "name": "Page name",
+        "tooltip": "Shows the name of the current page",
+        "icon": "icons/pages",
+        "static": true,
+        "appearance": { "title": { "text": "{page_name}", "position": "middle", "size": 16 } }
+      }
+    ]
+  }
+}
