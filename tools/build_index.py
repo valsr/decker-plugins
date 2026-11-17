@@ -8,8 +8,6 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from decker.asset.renderer import AssetRenderer
-
 from tools.versioning import parse_plugin_version
 
 INDEX_NAME = "Decker Plugins"
@@ -29,6 +27,9 @@ def _write_icon(source: Path, destination: Path, plugin_id: str) -> bool:
     """Write `destination` as a PNG: an SVG source is rendered at ICON_SIZE, a PNG source is copied unchanged."""
     try:
         if source.suffix.lower() == ".svg":
+            # Imported here: it needs the cairo system library, whose absence must cost one icon, not the whole build.
+            from decker.asset.renderer import AssetRenderer  # noqa: PLC0415
+
             AssetRenderer().render_path(source, ICON_SIZE, ICON_SIZE).save(destination, format="PNG")
         else:
             shutil.copyfile(source, destination)

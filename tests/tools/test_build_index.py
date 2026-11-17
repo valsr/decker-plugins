@@ -149,3 +149,29 @@ def test_fontawesome_gets_an_index_icon(tmp_path: Path) -> None:
     assert_that(plugin["name"]).is_equal_to("Fontawesome Icons")
     assert_that(plugin["icon"]).is_equal_to("icons/com.decker.fontawesome.png")
     assert_that(Image.open(tmp_path / "site" / "icons" / "com.decker.fontawesome.png").format).is_equal_to("PNG")
+
+
+def test_importing_the_builder_does_not_load_the_svg_renderer() -> None:
+    import subprocess
+    import sys
+
+    code = "import tools.build_index, sys; print('decker.asset.renderer' in sys.modules)"
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=Path(__file__).parents[2]
+    )
+    assert_that(result.stdout.strip()).is_equal_to("False")
+
+
+def test_missing_cairo_skips_the_svg_icon_but_still_builds_the_index(tmp_path: Path, monkeypatch, capsys) -> None:  # type: ignore[no-untyped-def]
+    def no_cairo(*_args: object, **_kwargs: object) -> None:
+        raise OSError("no library called 'cairo-2' was found")
+
+    monkeypatch.setattr("decker.asset.renderer.AssetRenderer", no_cairo)
+    plugins, entry = _icon_plugin(tmp_path, "mark", {"mark.svg": _SQUARE_SVG.encode()})
+
+    index_path = build_index([entry], plugins, tmp_path / "site")
+
+    plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
+    assert_that(plugin).does_not_contain_key("icon")
+    assert_that(plugin["versions"]).is_length(1)
+    assert_that(capsys.readouterr().err).contains("cairo")
