@@ -1,0 +1,26 @@
+[project]
+name = "decker-plugins"
+version = "0.1.0"
+description = "Plugins for Decker and the tooling that packages and publishes them"
+requires-python = ">=3.14"
+dependencies = [
+    "decker @ git+https://github.com/valsr/Decker.git@85bc9a5e0383979b66bcd7aaf33b0cfaece2a644",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "assertpy>=1.1", "pyyaml>=6", "ruff>=0.8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests", "plugins"]
+addopts = "--import-mode=importlib"
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

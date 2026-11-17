@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "id": "com.decker.counter",
+  "name": "Counter",
+  "version": "1.0.0",
+  "author": "Decker",
+  "description": "Counts key presses.",
+  "homepage": "https://github.com/valsr/decker-plugins",
+  "icon": "icons/counter",
+  "category": "Utilities",
+  "decker": ">=0.2",
+  "runtime": { "type": "python", "entry": "plugin.py", "requirements": ["pillow>=12"] },
+  "contributes": {
+    "actions": [
+      {
+        "id": "com.decker.counter.counter",
+        "name": "Counter",
+        "tooltip": "Press to count, long press to reset",
+        "icon": "icons/counter",
+        "gestures": ["press", "long_press"],
+        "appearance": { "background": "#1f618d" },
+        "settings": [
+          { "section": "Counting" },
+          { "key": "step", "type": "int", "label": "Step", "default": 1, "min": 1, "max": 9999 },
+          { "key": "double_step", "type": "int", "label": "Double press step", "optional": true,
+            "placeholder": "None (presses register immediately)", "min": -9999, "max": 9999 },
+          { "key": "max", "type": "int", "label": "Max count", "default": 0, "min": 0, "max": 99999,
+            "special_value": "∞ (no limit)" }
+        ]
+      }
+    ],
+    "icon_packs": [
+      { "id": "com.decker.counter.icons", "name": "Counter icons", "path": "iconpack" }
+    ]
+  }
+}
