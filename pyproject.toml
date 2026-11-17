@@ -25,3 +25,8 @@ target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
+
+[[tool.uv.index]]
+# Lock against PyPI so CI (and anyone else) can resolve the lockfile.
+url = "https://pypi.org/simple"
+default = true
