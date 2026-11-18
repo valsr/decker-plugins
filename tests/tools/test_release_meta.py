@@ -1,9 +1,12 @@
+import dataclasses
 import hashlib
 import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from assertpy import assert_that
+from decker.plugin.manifest import PluginManifest
 
 from tools.pack_all import pack_all
 from tools.release_meta import release_url, version_entry, write_sidecar
@@ -41,6 +44,10 @@ def _entry_for_manifest_extras(tmp_path: Path, extras: dict[str, object]) -> dic
     return version_entry(package, "https://example.com/d.deckerplugin", "2026-11-16T19:00:00Z")
 
 
+@pytest.mark.skipif(
+    "platforms" not in {f.name for f in dataclasses.fields(PluginManifest)},
+    reason="needs a Decker with platform support (bump the pin)",
+)
 def test_version_entry_includes_declared_platforms(tmp_path: Path) -> None:
     linux = {"desktops": ["kde"], "sessions": ["wayland"]}
 
