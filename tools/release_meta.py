@@ -40,8 +40,10 @@ def version_entry(package: Path, url: str, released: str) -> dict[str, Any]:
     entry: dict[str, Any] = {"version": manifest.version}
     if manifest.decker:
         entry["decker"] = manifest.decker
-    if manifest.platforms:
-        entry.update(manifest.platforms.to_payload())
+    # The repo pins a Decker that may predate platform support, so the attribute may not exist.
+    platforms = getattr(manifest, "platforms", None)
+    if platforms:
+        entry.update(platforms.to_payload())
     entry.update(
         url=url,
         size=len(data),
