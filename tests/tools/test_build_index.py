@@ -50,6 +50,16 @@ def test_build_index_keeps_older_versions(tmp_path: Path) -> None:
     assert_that(data["plugins"][0]["versions"][0]).does_not_contain_key("id")
 
 
+def test_build_index_keeps_platform_keys_on_versions(tmp_path: Path) -> None:
+    linux = {"desktops": ["kde"], "sessions": ["wayland"]}
+    entry = {**_counter_entry(tmp_path), "platforms": ["linux", "macos"], "linux": linux}
+
+    index_path = build_index([entry], PLUGINS, tmp_path / "site")
+
+    version = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["versions"][0]
+    assert_that(version).contains_entry({"platforms": ["linux", "macos"]}, {"linux": linux})
+
+
 def test_build_index_skips_plugin_without_manifest(tmp_path: Path) -> None:
     write_plugin(tmp_path / "plugins", "com.example.demo", "1.0.0")
     entry = {**_counter_entry(tmp_path), "id": "com.example.gone"}

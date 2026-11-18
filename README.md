@@ -23,6 +23,11 @@ permissions. See Decker's `docs/plugins/repositories.md`.
 3. Package it locally: `uv run python -m tools.pack_all` writes `dist/<id>-<version>.deckerplugin` (without `tests/`).
 4. Open a pull request.
 
+### Platform support
+
+Every plugin change must also update [docs/platform-support.md](docs/platform-support.md) (the plugins x platforms
+table; Decker has its own table for the core). Plugins declare `platforms`/`linux` in their manifest; see that page.
+
 ### Version rule
 
 Any change below `plugins/<id>/` needs a manifest `version` (semver `x.y.z`) greater than the highest `<id>-v*` git tag.
