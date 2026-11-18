@@ -1,13 +1,14 @@
 import hashlib
 import json
 from pathlib import Path
+from typing import Any
 
 from assertpy import assert_that
 
 from tools.pack_all import pack_all
 from tools.release_meta import release_url, version_entry, write_sidecar
 
-from .conftest import PLUGINS
+from .conftest import PLUGINS, write_plugin
 
 
 def test_version_entry_sha_and_size(tmp_path: Path) -> None:
@@ -27,6 +28,31 @@ def test_version_entry_sha_and_size(tmp_path: Path) -> None:
             "contributes": {"actions": ["Counter"], "icon_packs": ["Counter icons"]},
         }
     )
+
+
+def _entry_for_manifest_extras(tmp_path: Path, extras: dict[str, object]) -> dict[str, Any]:
+    plugins = tmp_path / "plugins"
+    folder = write_plugin(plugins, "com.example.demo", "1.0.0")
+    manifest_path = folder / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(extras)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    package = pack_all(plugins, tmp_path / "dist")[0]
+    return version_entry(package, "https://example.com/d.deckerplugin", "2026-11-16T19:00:00Z")
+
+
+def test_version_entry_includes_declared_platforms(tmp_path: Path) -> None:
+    linux = {"desktops": ["kde"], "sessions": ["wayland"]}
+
+    entry = _entry_for_manifest_extras(tmp_path, {"platforms": ["linux", "macos"], "linux": linux})
+
+    assert_that(entry).contains_entry({"platforms": ["linux", "macos"]}, {"linux": linux})
+
+
+def test_version_entry_omits_platform_keys_when_undeclared(tmp_path: Path) -> None:
+    entry = _entry_for_manifest_extras(tmp_path, {})
+
+    assert_that(entry).does_not_contain_key("platforms").does_not_contain_key("linux")
 
 
 def test_write_sidecar_adds_plugin_id(tmp_path: Path) -> None:

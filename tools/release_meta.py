@@ -26,7 +26,7 @@ def release_url(plugin_id: str, version: str) -> str:
 
 
 def version_entry(package: Path, url: str, released: str) -> dict[str, Any]:
-    """The index version entry for a package: version, decker, url, size, sha256, released, contributes names."""
+    """The index version entry for a package: version, decker, platform keys (if declared), url, size, sha256, etc."""
     data = package.read_bytes()
     manifest = read_manifest(data)
     contributes = {
@@ -40,6 +40,8 @@ def version_entry(package: Path, url: str, released: str) -> dict[str, Any]:
     entry: dict[str, Any] = {"version": manifest.version}
     if manifest.decker:
         entry["decker"] = manifest.decker
+    if manifest.platforms:
+        entry.update(manifest.platforms.to_payload())
     entry.update(
         url=url,
         size=len(data),
