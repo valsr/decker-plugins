@@ -86,3 +86,44 @@ jobs:
             fi
           done
           exit $status
+
+  test-distro:
+    name: test (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora
+            image: fedora:latest
+            experimental: false
+          - distro: arch
+            image: archlinux:latest
+            experimental: true
+    permissions:
+      contents: read
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - if: matrix.distro == 'fedora'
+        run: dnf install -y git python3.14 cairo fontconfig uv
+      - if: matrix.distro == 'arch'
+        run: pacman -Syu --noconfirm git python cairo fontconfig uv
+      - uses: actions/checkout@v4
+      - run: uv sync --locked
+      - name: Tool tests
+        run: uv run pytest -rs tests
+      - name: Plugin tests
+        shell: bash
+        run: |
+          status=0
+          for plugin in plugins/*/; do
+            if [ -d "${plugin}tests" ]; then
+              echo "::group::${plugin}"
+              uv run pytest -rs "${plugin}" || status=1
+              echo "::endgroup::"
+            fi
+          done
+          exit $status
