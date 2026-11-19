@@ -10,43 +10,34 @@ Appearance (background, title) is drawn by Decker; the plugin only renders the c
 background.
 """
 
-import functools
 import io
 import logging
-import subprocess
 from typing import Any
 
 from decker_plugin_sdk import ActionContext, DeckerPlugin, Gesture, action
 from PIL import Image, ImageDraw, ImageFont
 
+try:
+    from decker_plugin_sdk.fonts import font_path
+except ImportError:  # older Decker
+
+    def font_path(family: str = "DejaVu Sans", bold: bool = False, italic: bool = False) -> str | None:
+        return None
+
+
 _KEY_SIZE = 72  # sizes in settings are relative to a 72 px key
 _SCALE = 2  # render at 2x so the image stays sharp when scaled to larger keys
 _COUNT_SIZE = 28
 _COUNT_COLOR = "#ffffff"
-_FALLBACK_FONT = "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"
 
 
-@functools.lru_cache(maxsize=32)
-def _font_file(family: str, bold: bool) -> str | None:
-    """Resolve a font family to a file with fontconfig; None if it is unavailable."""
-    pattern = f"{family}:style=Bold" if bold else family
-    try:
-        result = subprocess.run(
-            ["fc-match", pattern, "--format=%{file}"], capture_output=True, text=True, timeout=2, check=True
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        logging.debug("fc-match failed for %r: %s", family, exc)
-        return None
-    return result.stdout.strip() or None
-
-
-def _font(family: str, size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path in (_font_file(family, bold), _FALLBACK_FONT):
-        if path:
-            try:
-                return ImageFont.truetype(path, size)
-            except OSError:
-                continue
+def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    path = font_path(bold=True)
+    if path:
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError as exc:
+            logging.debug("cannot open %s: %s", path, exc)
     return ImageFont.load_default(size)
 
 
@@ -59,7 +50,7 @@ def render(count: int) -> bytes:
         (centre, centre),
         str(count),
         fill=_COUNT_COLOR,
-        font=_font("DejaVu Sans", _COUNT_SIZE * _SCALE, True),
+        font=_font(_COUNT_SIZE * _SCALE),
         anchor="mm",
     )
     buf = io.BytesIO()

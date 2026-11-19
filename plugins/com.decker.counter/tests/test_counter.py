@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import sys
 import threading
 from pathlib import Path
 from types import ModuleType
@@ -14,8 +15,9 @@ import pytest
 from assertpy import assert_that
 from decker.plugin.manifest import PluginManifest
 from decker.plugin.settings_schema import apply_schema
+from decker.server.fonts import BUNDLED_FONT_DIR
 from decker_plugin_sdk import run
-from PIL import Image
+from PIL import Image, ImageFont
 
 _DIR = Path(__file__).parents[1]
 _ACTION = "com.decker.counter.counter"
@@ -213,13 +215,70 @@ class TestRender:
         assert_that(image.getpixel((2, 2))).is_equal_to((0, 0, 0, 0))
         assert_that(any(p[3] > 0 for p in image.get_flattened_data())).is_true()  # type: ignore[index]
 
-    def test_missing_fontconfig_falls_back(self, counter, monkeypatch):
-        def _missing(*_args: Any, **_kwargs: Any) -> None:
-            raise FileNotFoundError("fc-match")
 
-        counter._font_file.cache_clear()  # pylint: disable=protected-access
-        monkeypatch.setattr(counter.subprocess, "run", _missing)
-        data = counter.render(0)
-        counter._font_file.cache_clear()  # pylint: disable=protected-access
+def _load(name: str) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, _DIR / "plugin.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-        assert_that(_image(data).size).is_equal_to((144, 144))
+
+def _has_ink(data: bytes) -> bool:
+    image = Image.open(io.BytesIO(data)).convert("RGBA")
+    return any(p[3] > 0 for p in image.get_flattened_data())  # type: ignore[index]
+
+
+class TestFont:
+    @pytest.fixture(name="recorder")
+    def recorder_fixture(self, monkeypatch):
+        used: list[str] = []
+        real = ImageFont.truetype
+
+        def _record(font: Any = None, *args: Any, **kwargs: Any) -> Any:
+            if isinstance(font, str):  # load_default opens its built-in font from a BytesIO
+                used.append(font)
+            return real(font, *args, **kwargs)
+
+        monkeypatch.setattr(ImageFont, "truetype", _record)
+        return used
+
+    def test_uses_the_bundled_dejavu_sans_bold(self, monkeypatch, recorder):
+        monkeypatch.setenv("DECKER_FONT_DIR", str(BUNDLED_FONT_DIR))
+        module = _load("decker_plugin_test_counter_sdk")
+
+        data = module.render(5)
+
+        assert_that(recorder).is_equal_to([str(BUNDLED_FONT_DIR / "DejaVuSans-Bold.ttf")])
+        assert_that(_has_ink(data)).is_true()
+
+    def test_no_font_dir_falls_back_to_the_default_font(self, monkeypatch, recorder):
+        monkeypatch.delenv("DECKER_FONT_DIR", raising=False)
+        module = _load("decker_plugin_test_counter_nodir")
+
+        data = module.render(5)
+
+        assert_that(recorder).is_empty()
+        assert_that(_has_ink(data)).is_true()
+
+    def test_unopenable_font_file_falls_back(self, monkeypatch, tmp_path):
+        broken = tmp_path / "DejaVuSans-Bold.ttf"
+        broken.write_bytes(b"not a font")
+        monkeypatch.setenv("DECKER_FONT_DIR", str(tmp_path))
+        module = _load("decker_plugin_test_counter_broken")
+
+        assert_that(_has_ink(module.render(5))).is_true()
+
+    def test_missing_sdk_fonts_module_falls_back(self, monkeypatch, recorder):
+        monkeypatch.setenv("DECKER_FONT_DIR", str(BUNDLED_FONT_DIR))
+        monkeypatch.setitem(sys.modules, "decker_plugin_sdk.fonts", None)  # makes the import raise ImportError
+        module = _load("decker_plugin_test_counter_noimport")
+
+        data = module.render(5)
+
+        assert_that(recorder).is_empty()
+        assert_that(_has_ink(data)).is_true()
+
+    def test_plugin_no_longer_imports_subprocess(self, counter):
+        assert_that(hasattr(counter, "subprocess")).is_false()
+        assert_that((_DIR / "plugin.py").read_text()).does_not_contain("subprocess").does_not_contain("fc-match")
