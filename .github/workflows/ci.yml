@@ -59,6 +59,17 @@ jobs:
       QT_QPA_PLATFORM: offscreen
     steps:
       - uses: actions/checkout@v4
+      - if: runner.os == 'Windows'
+        id: msys
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          path-type: inherit
+          install: mingw-w64-x86_64-cairo
+      - if: runner.os == 'Windows'
+        run: echo "${{ steps.msys.outputs.msys2-location }}/mingw64/bin" >> "$GITHUB_PATH"
+        shell: bash
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - name: Tool tests
