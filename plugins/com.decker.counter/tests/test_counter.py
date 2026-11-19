@@ -261,13 +261,16 @@ class TestFont:
         assert_that(recorder).is_empty()
         assert_that(_has_ink(data)).is_true()
 
-    def test_unopenable_font_file_falls_back(self, monkeypatch, tmp_path):
+    def test_unopenable_font_file_falls_back(self, monkeypatch, tmp_path, recorder):
         broken = tmp_path / "DejaVuSans-Bold.ttf"
         broken.write_bytes(b"not a font")
         monkeypatch.setenv("DECKER_FONT_DIR", str(tmp_path))
         module = _load("decker_plugin_test_counter_broken")
 
-        assert_that(_has_ink(module.render(5))).is_true()
+        data = module.render(5)
+
+        assert_that(recorder).contains(str(broken))
+        assert_that(_has_ink(data)).is_true()
 
     def test_missing_sdk_fonts_module_falls_back(self, monkeypatch, recorder):
         monkeypatch.setenv("DECKER_FONT_DIR", str(BUNDLED_FONT_DIR))
