@@ -38,7 +38,7 @@ say so in its manifest (see [Declaring platforms](#declaring-platforms)) so user
 | profiles (`com.decker.profiles`) | Not verified | CI[^3] | Not verified | CI | CI |
 
 [^1]: CI means the GitHub Actions workflow
-    ([run 44563856717](https://github.com/valsr/decker-plugins/actions/runs/44563856717), head `f78e6cf`) was green on
+    ([run 44568535838](https://github.com/valsr/decker-plugins/actions/runs/44568535838), head `fc47af7`) was green on
     `ubuntu-latest`, `windows-latest` and `macos-latest`. On each OS it ran the tool tests (33 passed) and the five
     plugin suites (counter 19, fontawesome 9, icon 8, pages 36, profiles 30 passed) against the pinned Decker,
     including Counter's font path with the bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
