@@ -31,21 +31,26 @@ say so in its manifest (see [Declaring platforms](#declaring-platforms)) so user
 
 | Plugin | Linux (Arch/Plasma/Wayland) | Linux (Ubuntu/Debian/Fedora/GNOME) | Linux (other) | Windows | macOS |
 |--------|------|------|------|------|------|
-| counter (`com.decker.counter`)[^2] | Not verified | CI[^3] | Not verified | CI | CI |
-| fontawesome (`com.decker.fontawesome`) | Not verified | CI[^3] | Not verified | CI | CI |
-| icon (`com.decker.icon`) | Not verified | CI[^3] | Not verified | CI | CI |
-| pages (`com.decker.pages`) | Not verified | CI[^3] | Not verified | CI | CI |
-| profiles (`com.decker.profiles`) | Not verified | CI[^3] | Not verified | CI | CI |
+| counter (`com.decker.counter`)[^2] | CI[^4] | CI[^3] | Not verified | CI | CI |
+| fontawesome (`com.decker.fontawesome`) | CI[^4] | CI[^3] | Not verified | CI | CI |
+| icon (`com.decker.icon`) | CI[^4] | CI[^3] | Not verified | CI | CI |
+| pages (`com.decker.pages`) | CI[^4] | CI[^3] | Not verified | CI | CI |
+| profiles (`com.decker.profiles`) | CI[^4] | CI[^3] | Not verified | CI | CI |
 
 [^1]: CI means the GitHub Actions workflow
-    ([run 44568535838](https://github.com/valsr/decker-plugins/actions/runs/44568535838), head `fc47af7`) was green on
-    `ubuntu-latest`, `windows-latest` and `macos-latest`. On each OS it ran the tool tests (33 passed) and the five
+    ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
+    `ubuntu-latest`, `windows-latest`, `macos-latest` and in `fedora:latest` and `archlinux:latest` containers. On each
+    it ran the tool tests (33 passed) and the five
     plugin suites (counter 19, fontawesome 9, icon 8, pages 36, profiles 30 passed) against the pinned Decker,
     including Counter's font path with the bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
     cover a real Stream Deck, the real Decker UI, or a real plugin process under the Decker supervisor on any OS.
 [^2]: Since 1.1.0 Counter draws with Decker's bundled DejaVu Sans Bold through the SDK (`decker_plugin_sdk.fonts`) on
     every OS, and falls back to Pillow's default font on a Decker without `decker_plugin_sdk.fonts`.
-[^3]: The `ubuntu-latest` runner covers the plugin tests on Ubuntu, not the GNOME desktop specifically.
+[^3]: The `ubuntu-latest` runner and the Fedora container (a blocking check) cover the plugin tests on Ubuntu and
+    Fedora, not the GNOME desktop specifically.
+[^4]: The Arch Linux container runs the same tests as an advisory check (`continue-on-error`, since a rolling release
+    can break without a change here). It covers Arch, not the Plasma desktop or Wayland, and the maintainer has not
+    yet used the plugins there, so the cell is `CI`, not `Yes`.
 
 Pages, Profiles, Icon and Font Awesome use no OS APIs. No manifest declares `platforms` or `linux`, which means all
 platforms; the table above records what has been verified, not what the manifests restrict.
