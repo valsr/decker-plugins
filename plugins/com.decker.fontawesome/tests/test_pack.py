@@ -8,7 +8,7 @@ import pytest
 from assertpy import assert_that
 from decker.asset.iconpack import IconPackRegistry
 from decker.asset.renderer import AssetRenderer
-from decker.plugin.icons import MAX_ICON_BYTES, resolve_icon
+from decker.plugin.icons import max_icon_bytes, resolve_icon
 from decker.plugin.loader import InstalledPlugin
 from decker.plugin.manifest import PluginManifest
 
@@ -64,7 +64,7 @@ def test_every_icon_is_readable_within_the_size_cap(manifest: PluginManifest, re
         unreadable = [name for name in names if registry.read_icon(spec.id, name) is None]
         assert_that(unreadable).described_as(f"{spec.id} unreadable").is_empty()
         biggest = max((_DIR / spec.path / name).stat().st_size for name in names)
-        assert_that(biggest).is_less_than_or_equal_to(MAX_ICON_BYTES)
+        assert_that(biggest).is_less_than_or_equal_to(max_icon_bytes())
 
 
 def test_every_svg_renders(manifest: PluginManifest, registry: IconPackRegistry) -> None:
