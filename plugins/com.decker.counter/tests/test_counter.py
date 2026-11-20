@@ -21,7 +21,7 @@ from PIL import Image, ImageFont
 
 _DIR = Path(__file__).parents[1]
 _ACTION = "com.decker.counter.counter"
-_SCHEMA = PluginManifest.load(_DIR / "manifest.json").actions[0].settings
+_SCHEMA = PluginManifest.load(_DIR / "manifest.json").cards[0].settings
 
 
 @pytest.fixture(scope="module", name="counter")
@@ -53,7 +53,7 @@ class Harness:
         self._plugin_out = os.fdopen(out_w, "wb")
         self._from_plugin = os.fdopen(out_r, "rb")
         self._thread = threading.Thread(
-            target=run, args=({_ACTION: counter.CounterAction}, self._plugin_in, self._plugin_out)
+            target=run, args=({_ACTION: counter.CounterCard}, self._plugin_in, self._plugin_out)
         )
         self._thread.start()
         self.send("hello", payload={"protocol": 1, "decker_version": "x", "plugin_id": "com.decker.counter"})
@@ -84,7 +84,7 @@ class Harness:
             "will_appear",
             "c1",
             {
-                "action": _ACTION,
+                "card": _ACTION,
                 "device": "d",
                 "key": {"index": 0, "column": 0, "row": 0},
                 "settings": _settings(**values),
@@ -202,7 +202,7 @@ class TestSettingsSchema:
         assert_that(_settings(background="#102030", title="Hi")).is_equal_to({"step": 1, "double_step": None, "max": 0})
 
     def test_manifest_declares_the_blue_background_default(self):
-        spec = PluginManifest.load(_DIR / "manifest.json").actions[0]
+        spec = PluginManifest.load(_DIR / "manifest.json").cards[0]
 
         assert_that(spec.appearance).is_equal_to({"background": "#1f618d"})
 

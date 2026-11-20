@@ -21,7 +21,7 @@ def plugin_fixture() -> ModuleType:
 
 @pytest.fixture(name="key")
 def key_fixture(plugin: ModuleType):
-    harness = Harness(plugin, _ACTION, "GotoAction")
+    harness = Harness(plugin, _ACTION, "GotoCard")
     yield harness
     harness.close()
 

@@ -1,20 +1,20 @@
 {
-  "format": 1,
+  "format": 2,
   "id": "com.decker.profiles",
   "name": "Profiles",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Decker",
   "description": "Keys for moving between a device's profiles.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/profiles",
   "category": "Utilities",
-  "decker": ">=0.5",
+  "decker": ">=0.6",
   "runtime": {
     "type": "python",
     "entry": "plugin.py"
   },
   "contributes": {
-    "actions": [
+    "cards": [
       {
         "id": "com.decker.profiles.next",
         "name": "Next profile",

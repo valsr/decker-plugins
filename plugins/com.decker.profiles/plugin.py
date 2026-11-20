@@ -9,7 +9,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from decker_plugin_sdk import ActionContext, DeckerPlugin, action
+from decker_plugin_sdk import CardContext, DeckerPlugin, card
 
 _ASSETS = Path(__file__).parent / "assets"
 _COLOUR = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
@@ -44,37 +44,37 @@ def render_caret(svg: bytes, color: Any, ink: tuple[float, float, float, float] 
     return (text[: root.start()] + head + tail.replace("currentColor", colour[:7])).encode("utf-8")
 
 
-class ArrowAction(DeckerPlugin):
+class ArrowCard(DeckerPlugin):
     """Shared behaviour of the Next and Previous keys."""
 
     direction = "next"
     asset = "caret-right.svg"
     ink: tuple[float, float, float, float] = (64, 96, 256, 416)
 
-    def on_will_appear(self, ctx: ActionContext) -> None:
+    def on_will_appear(self, ctx: CardContext) -> None:
         self._draw(ctx)
 
-    def on_settings_changed(self, ctx: ActionContext) -> None:
+    def on_settings_changed(self, ctx: CardContext) -> None:
         self._draw(ctx)
 
-    def on_press(self, ctx: ActionContext) -> None:
+    def on_press(self, ctx: CardContext) -> None:
         ctx.switch_profile(self.direction, wrap=ctx.settings.get("wrap") is True)
 
-    def _draw(self, ctx: ActionContext) -> None:
+    def _draw(self, ctx: CardContext) -> None:
         svg = (_ASSETS / self.asset).read_bytes()
         ctx.set_image(render_caret(svg, ctx.settings.get("color"), self.ink), "svg")
 
 
-@action("com.decker.profiles.next")
-class NextAction(ArrowAction):
+@card("com.decker.profiles.next")
+class NextCard(ArrowCard):
     """Next profile key."""
 
     direction = "next"
     asset = "caret-right.svg"
 
 
-@action("com.decker.profiles.previous")
-class PreviousAction(ArrowAction):
+@card("com.decker.profiles.previous")
+class PreviousCard(ArrowCard):
     """Previous profile key."""
 
     direction = "previous"
@@ -93,23 +93,23 @@ def _chosen_profile(settings: dict[str, Any]) -> tuple[int, str, str]:
     return profile_id, name if isinstance(name, str) else "", icon if isinstance(icon, str) else ""
 
 
-@action("com.decker.profiles.goto")
-class GotoAction(DeckerPlugin):
+@card("com.decker.profiles.goto")
+class GotoCard(DeckerPlugin):
     """Shows the chosen profile's icon and name; a press goes to that profile."""
 
-    def on_will_appear(self, ctx: ActionContext) -> None:
+    def on_will_appear(self, ctx: CardContext) -> None:
         self._show(ctx)
 
-    def on_settings_changed(self, ctx: ActionContext) -> None:
+    def on_settings_changed(self, ctx: CardContext) -> None:
         self._show(ctx)
 
-    def on_press(self, ctx: ActionContext) -> None:
+    def on_press(self, ctx: CardContext) -> None:
         profile_id, _name, _icon = _chosen_profile(ctx.settings)
         if profile_id >= 0:
             ctx.go_to_profile(profile_id)
 
     @staticmethod
-    def _show(ctx: ActionContext) -> None:
+    def _show(ctx: CardContext) -> None:
         profile_id, name, icon = _chosen_profile(ctx.settings)
         if profile_id >= 0 and icon:
             ctx.set_icon(icon)

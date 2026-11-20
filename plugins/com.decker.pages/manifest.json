@@ -1,17 +1,17 @@
 {
-  "format": 1,
+  "format": 2,
   "id": "com.decker.pages",
   "name": "Pages",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "Decker",
   "description": "Keys for moving between a device's pages.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/pages",
   "category": "Utilities",
-  "decker": ">=0.5",
+  "decker": ">=0.6",
   "runtime": { "type": "python", "entry": "plugin.py" },
   "contributes": {
-    "actions": [
+    "cards": [
       {
         "id": "com.decker.pages.next",
         "name": "Next page",

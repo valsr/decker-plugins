@@ -86,7 +86,7 @@ class Harness:
             "will_appear",
             CONTEXT,
             {
-                "action": self.action_id,
+                "card": self.action_id,
                 "device": "d",
                 "key": {"index": 0, "column": 0, "row": 0},
                 "settings": settings,

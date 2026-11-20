@@ -1,17 +1,17 @@
 {
-  "format": 1,
+  "format": 2,
   "id": "com.decker.counter",
   "name": "Counter",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Decker",
   "description": "Counts key presses.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/counter",
   "category": "Utilities",
-  "decker": ">=0.2",
+  "decker": ">=0.6",
   "runtime": { "type": "python", "entry": "plugin.py", "requirements": ["pillow>=12"] },
   "contributes": {
-    "actions": [
+    "cards": [
       {
         "id": "com.decker.counter.counter",
         "name": "Counter",
