@@ -52,7 +52,6 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 |--------|------|------|------|------|------|
 | counter (`com.decker.counter`)[^2] | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | fontawesome (`com.decker.fontawesome`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
-| icon (`com.decker.icon`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | pages (`com.decker.pages`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | profiles (`com.decker.profiles`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 

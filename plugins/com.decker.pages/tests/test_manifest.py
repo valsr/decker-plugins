@@ -30,7 +30,7 @@ def _fields(spec) -> dict[str, SettingField]:
 def test_manifest_is_valid_and_gated_on_0_5(manifest: PluginManifest) -> None:
     assert_that(manifest.id).is_equal_to(_PLUGIN_ID)
     assert_that(manifest.name).is_equal_to("Pages")
-    assert_that(manifest.version).is_equal_to("1.1.0")
+    assert_that(manifest.version).is_equal_to("1.2.0")
     assert_that(manifest.decker).is_equal_to(">=0.5")
     assert_that(is_compatible(manifest.decker, "0.4.0")).is_false()
     assert_that(is_compatible(manifest.decker, "0.5.0")).is_true()
@@ -38,14 +38,12 @@ def test_manifest_is_valid_and_gated_on_0_5(manifest: PluginManifest) -> None:
     assert_that(manifest.runtime.requirements).is_empty()  # type: ignore[union-attr]
 
 
-def test_five_actions_with_the_expected_ids_and_static_flags(manifest: PluginManifest) -> None:
+def test_three_actions_with_the_expected_ids_and_static_flags(manifest: PluginManifest) -> None:
     assert_that({a.id: a.static for a in manifest.actions}).is_equal_to(
         {
             "com.decker.pages.next": False,
             "com.decker.pages.previous": False,
             "com.decker.pages.goto": False,
-            "com.decker.pages.indicator": True,
-            "com.decker.pages.name": True,
         }
     )
 
@@ -65,18 +63,6 @@ def test_runtime_action_settings(manifest: PluginManifest) -> None:
         [("profile", "profile", ""), ("page", "page", "")]
     )
     assert_that(goto["page"].extra["profile_field"]).is_equal_to("profile")
-
-
-def test_presets_are_static_with_templated_title_defaults(manifest: PluginManifest) -> None:
-    specs = {a.id: a for a in manifest.actions}
-    assert_that(specs["com.decker.pages.indicator"].appearance).is_equal_to(
-        {"title": {"text": "{page_index} / {page_count}", "position": "middle", "size": 24}}
-    )
-    assert_that(specs["com.decker.pages.name"].appearance).is_equal_to(
-        {"title": {"text": "{page_name}", "position": "middle", "size": 16}}
-    )
-    for key in ("indicator", "name"):
-        assert_that(specs[f"com.decker.pages.{key}"].settings).is_empty()
 
 
 @pytest.mark.parametrize("name", ["caret-left.svg", "caret-right.svg"])
