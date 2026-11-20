@@ -2,9 +2,9 @@
   "format": 1,
   "id": "com.decker.pages",
   "name": "Pages",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "Decker",
-  "description": "Keys for moving between a device's pages, and ready-made page indicators.",
+  "description": "Keys for moving between a device's pages.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/pages",
   "category": "Utilities",
@@ -47,22 +47,6 @@
           { "key": "profile", "type": "profile", "label": "Profile" },
           { "key": "page", "type": "page", "label": "Page", "profile_field": "profile" }
         ]
-      },
-      {
-        "id": "com.decker.pages.indicator",
-        "name": "Page indicator",
-        "tooltip": "Shows the page number, like 2 / 5",
-        "icon": "icons/pages",
-        "static": true,
-        "appearance": { "title": { "text": "{page_index} / {page_count}", "position": "middle", "size": 24 } }
-      },
-      {
-        "id": "com.decker.pages.name",
-        "name": "Page name",
-        "tooltip": "Shows the name of the current page",
-        "icon": "icons/pages",
-        "static": true,
-        "appearance": { "title": { "text": "{page_name}", "position": "middle", "size": 16 } }
       }
     ]
   }

@@ -1,4 +1,4 @@
-"""Pages plugin: next, previous and go-to-page keys. The indicator and name presets are static actions.
+"""Pages plugin: next, previous and go-to-page keys.
 
 Next and Previous draw the plugin's own Font Awesome caret (``assets/``), recoloured and centred at about 60% of the
 key. The caret SVGs use ``currentColor``, which renders black, so the chosen colour is substituted into the SVG.
