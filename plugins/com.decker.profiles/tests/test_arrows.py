@@ -19,14 +19,14 @@ def plugin_fixture() -> ModuleType:
 
 @pytest.fixture(name="next_key")
 def next_fixture(plugin: ModuleType):
-    harness = Harness(plugin, "com.decker.profiles.next", "NextAction")
+    harness = Harness(plugin, "com.decker.profiles.next", "NextCard")
     yield harness
     harness.close()
 
 
 @pytest.fixture(name="previous_key")
 def previous_fixture(plugin: ModuleType):
-    harness = Harness(plugin, "com.decker.profiles.previous", "PreviousAction")
+    harness = Harness(plugin, "com.decker.profiles.previous", "PreviousCard")
     yield harness
     harness.close()
 

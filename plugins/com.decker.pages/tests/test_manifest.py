@@ -30,16 +30,16 @@ def _fields(spec) -> dict[str, SettingField]:
 def test_manifest_is_valid_and_gated_on_0_5(manifest: PluginManifest) -> None:
     assert_that(manifest.id).is_equal_to(_PLUGIN_ID)
     assert_that(manifest.name).is_equal_to("Pages")
-    assert_that(manifest.version).is_equal_to("1.2.0")
-    assert_that(manifest.decker).is_equal_to(">=0.5")
-    assert_that(is_compatible(manifest.decker, "0.4.0")).is_false()
-    assert_that(is_compatible(manifest.decker, "0.5.0")).is_true()
+    assert_that(manifest.version).is_equal_to("1.3.0")
+    assert_that(manifest.decker).is_equal_to(">=0.6")
+    assert_that(is_compatible(manifest.decker, "0.5.0")).is_false()
+    assert_that(is_compatible(manifest.decker, "0.6.0")).is_true()
     assert_that(manifest.runtime).is_not_none()
     assert_that(manifest.runtime.requirements).is_empty()  # type: ignore[union-attr]
 
 
 def test_three_actions_with_the_expected_ids_and_static_flags(manifest: PluginManifest) -> None:
-    assert_that({a.id: a.static for a in manifest.actions}).is_equal_to(
+    assert_that({a.id: a.static for a in manifest.cards}).is_equal_to(
         {
             "com.decker.pages.next": False,
             "com.decker.pages.previous": False,
@@ -49,7 +49,7 @@ def test_three_actions_with_the_expected_ids_and_static_flags(manifest: PluginMa
 
 
 def test_runtime_action_settings(manifest: PluginManifest) -> None:
-    specs = {a.id: a for a in manifest.actions}
+    specs = {a.id: a for a in manifest.cards}
     for key in ("next", "previous"):
         fields = _fields(specs[f"com.decker.pages.{key}"])
         assert_that(list(fields)).is_equal_to(["wrap", "color"])
@@ -77,7 +77,7 @@ def test_notice_credits_font_awesome() -> None:
 
 def test_icons_resolve(manifest: PluginManifest) -> None:
     assert_that(resolve_icon(_DIR, manifest.icon)).is_not_none()
-    for spec in manifest.actions:
+    for spec in manifest.cards:
         assert_that(resolve_icon(_DIR, spec.icon)).is_not_none()
 
 

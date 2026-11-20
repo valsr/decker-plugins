@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from decker_plugin_sdk import ActionContext, DeckerPlugin, action
+from decker_plugin_sdk import CardContext, DeckerPlugin, card
 
 _ASSETS = Path(__file__).parent / "assets"
 _COLOUR = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
@@ -43,37 +43,37 @@ def render_caret(svg: bytes, color: Any, ink: tuple[float, float, float, float] 
     return (text[: root.start()] + head + tail.replace("currentColor", colour[:7])).encode("utf-8")
 
 
-class ArrowAction(DeckerPlugin):
+class ArrowCard(DeckerPlugin):
     """Shared behaviour of the Next and Previous keys."""
 
     direction = "next"
     asset = "caret-right.svg"
     ink: tuple[float, float, float, float] = (64, 96, 256, 416)
 
-    def on_will_appear(self, ctx: ActionContext) -> None:
+    def on_will_appear(self, ctx: CardContext) -> None:
         self._draw(ctx)
 
-    def on_settings_changed(self, ctx: ActionContext) -> None:
+    def on_settings_changed(self, ctx: CardContext) -> None:
         self._draw(ctx)
 
-    def on_press(self, ctx: ActionContext) -> None:
+    def on_press(self, ctx: CardContext) -> None:
         ctx.switch_page(self.direction, wrap=ctx.settings.get("wrap") is True)
 
-    def _draw(self, ctx: ActionContext) -> None:
+    def _draw(self, ctx: CardContext) -> None:
         svg = (_ASSETS / self.asset).read_bytes()
         ctx.set_image(render_caret(svg, ctx.settings.get("color"), self.ink), "svg")
 
 
-@action("com.decker.pages.next")
-class NextAction(ArrowAction):
+@card("com.decker.pages.next")
+class NextCard(ArrowCard):
     """Next page key."""
 
     direction = "next"
     asset = "caret-right.svg"
 
 
-@action("com.decker.pages.previous")
-class PreviousAction(ArrowAction):
+@card("com.decker.pages.previous")
+class PreviousCard(ArrowCard):
     """Previous page key."""
 
     direction = "previous"
@@ -92,22 +92,22 @@ def _chosen_page(settings: dict[str, Any]) -> tuple[str, str]:
     return page_id, name if isinstance(name, str) else ""
 
 
-@action("com.decker.pages.goto")
-class GotoAction(DeckerPlugin):
+@card("com.decker.pages.goto")
+class GotoCard(DeckerPlugin):
     """Titled "Go To <page name>"; a press goes to the chosen page."""
 
-    def on_will_appear(self, ctx: ActionContext) -> None:
+    def on_will_appear(self, ctx: CardContext) -> None:
         self._title(ctx)
 
-    def on_settings_changed(self, ctx: ActionContext) -> None:
+    def on_settings_changed(self, ctx: CardContext) -> None:
         self._title(ctx)
 
-    def on_press(self, ctx: ActionContext) -> None:
+    def on_press(self, ctx: CardContext) -> None:
         page_id, _name = _chosen_page(ctx.settings)
         if page_id:
             ctx.go_to_page(page_id)
 
     @staticmethod
-    def _title(ctx: ActionContext) -> None:
+    def _title(ctx: CardContext) -> None:
         page_id, name = _chosen_page(ctx.settings)
         ctx.set_title(f"Go To {name}" if page_id and name else "")

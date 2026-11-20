@@ -36,7 +36,7 @@ def test_manifest_is_valid_and_named(manifest: PluginManifest) -> None:
     assert_that(manifest.id).is_equal_to(_PLUGIN_ID)
     assert_that(manifest.name).is_equal_to("Fontawesome Icons")
     assert_that(manifest.description).is_not_empty().is_equal_to(manifest.description.strip())
-    assert_that(manifest.actions).is_empty()
+    assert_that(manifest.cards).is_empty()
     assert_that(manifest.icon_packs).is_length(3)
 
 

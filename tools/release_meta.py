@@ -32,6 +32,7 @@ def version_entry(package: Path, url: str, released: str) -> dict[str, Any]:
     contributes = {
         kind: names
         for kind, names in (
+            ("cards", [c.name for c in manifest.cards]),
             ("actions", [a.name for a in manifest.actions]),
             ("icon_packs", [p.name for p in manifest.icon_packs]),
         )

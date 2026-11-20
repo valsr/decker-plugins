@@ -28,14 +28,14 @@ def plugin_fixture() -> ModuleType:
 
 @pytest.fixture(name="next_key")
 def next_fixture(plugin: ModuleType):
-    harness = Harness(plugin, _NEXT, "NextAction")
+    harness = Harness(plugin, _NEXT, "NextCard")
     yield harness
     harness.close()
 
 
 @pytest.fixture(name="previous_key")
 def previous_fixture(plugin: ModuleType):
-    harness = Harness(plugin, _PREVIOUS, "PreviousAction")
+    harness = Harness(plugin, _PREVIOUS, "PreviousCard")
     yield harness
     harness.close()
 

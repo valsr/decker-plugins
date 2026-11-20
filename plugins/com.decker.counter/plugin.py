@@ -14,7 +14,7 @@ import io
 import logging
 from typing import Any
 
-from decker_plugin_sdk import ActionContext, DeckerPlugin, Gesture, action
+from decker_plugin_sdk import CardContext, DeckerPlugin, Gesture, card
 from PIL import Image, ImageDraw, ImageFont
 
 try:
@@ -58,8 +58,8 @@ def render(count: int) -> bytes:
     return buf.getvalue()
 
 
-@action("com.decker.counter.counter")
-class CounterAction(DeckerPlugin):
+@card("com.decker.counter.counter")
+class CounterCard(DeckerPlugin):
     """Counts presses: press adds step, double press adds double_step, long press resets to 0."""
 
     def __init__(self) -> None:
@@ -72,23 +72,23 @@ class CounterAction(DeckerPlugin):
             wanted.add(Gesture.DOUBLE_PRESS)
         return frozenset(wanted)
 
-    def on_will_appear(self, ctx: ActionContext) -> None:
+    def on_will_appear(self, ctx: CardContext) -> None:
         self._count = 0
         self._push(ctx)
 
-    def on_press(self, ctx: ActionContext) -> None:
+    def on_press(self, ctx: CardContext) -> None:
         self._advance(ctx.settings["step"], ctx.settings["max"])
         self._push(ctx)
 
-    def on_double_press(self, ctx: ActionContext) -> None:
+    def on_double_press(self, ctx: CardContext) -> None:
         self._advance(ctx.settings["double_step"] or 0, ctx.settings["max"])
         self._push(ctx)
 
-    def on_long_press(self, ctx: ActionContext) -> None:
+    def on_long_press(self, ctx: CardContext) -> None:
         self._count = 0
         self._push(ctx)
 
-    def on_settings_changed(self, ctx: ActionContext) -> None:
+    def on_settings_changed(self, ctx: CardContext) -> None:
         self._push(ctx)
 
     def _advance(self, amount: int, max_count: int) -> None:
@@ -96,5 +96,5 @@ class CounterAction(DeckerPlugin):
         if max_count > 0 and self._count >= max_count:
             self._count = 0
 
-    def _push(self, ctx: ActionContext) -> None:
+    def _push(self, ctx: CardContext) -> None:
         ctx.set_image(render(self._count))
