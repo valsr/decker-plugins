@@ -22,8 +22,8 @@ def test_version_entry_sha_and_size(tmp_path: Path) -> None:
 
     assert_that(entry).is_equal_to(
         {
-            "version": "1.1.0",
-            "decker": ">=0.2",
+            "version": "1.2.0",
+            "decker": ">=0.6",
             "url": "https://example.com/c.deckerplugin",
             "size": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
