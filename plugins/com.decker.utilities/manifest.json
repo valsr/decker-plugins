@@ -118,6 +118,133 @@
             }
           }
         }
+      },
+      {
+        "id": "com.decker.utilities.brightness-level",
+        "name": "Brightness Level",
+        "tooltip": "Shows the display brightness; press to raise it, double press to lower it, long press to set it to 75%",
+        "icon": "fas:sun",
+        "appearance": {
+          "background": "#000000"
+        },
+        "settings": [
+          {
+            "key": "monitor",
+            "type": "choice",
+            "label": "Monitor",
+            "default": "all",
+            "options": [
+              {
+                "label": "All monitors",
+                "value": "all"
+              }
+            ],
+            "options_source": "monitors"
+          }
+        ],
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "increase",
+              "value": 10
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 10
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "set",
+              "value": 75
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.brightness-up",
+        "name": "Brightness Up",
+        "tooltip": "Raise the display brightness; double press for a small step, long press to set 75%",
+        "icon": "fas:sun",
+        "static": true,
+        "appearance": {
+          "background": "#000000",
+          "icon": {
+            "ref": "fas:sun",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "increase",
+              "value": 10,
+              "monitor": "all"
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "increase",
+              "value": 5,
+              "monitor": "all"
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "set",
+              "value": 75,
+              "monitor": "all"
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.brightness-down",
+        "name": "Brightness Down",
+        "tooltip": "Lower the display brightness; double press for a small step, long press to set 25%",
+        "icon": "fas:sun",
+        "static": true,
+        "appearance": {
+          "background": "#000000",
+          "icon": {
+            "ref": "fas:sun",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 10,
+              "monitor": "all"
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 5,
+              "monitor": "all"
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "set",
+              "value": 25,
+              "monitor": "all"
+            }
+          }
+        }
       }
     ],
     "actions": [
@@ -248,6 +375,57 @@
             "default": false
           }
         ]
+      },
+      {
+        "id": "com.decker.utilities.brightness",
+        "name": "Brightness",
+        "tooltip": "Raise, lower or set the display brightness",
+        "icon": "fas:sun",
+        "scope": "global",
+        "returns": "The new brightness level, 0-100 (the first changed monitor's)",
+        "settings": [
+          {
+            "key": "mode",
+            "type": "choice",
+            "label": "Mode",
+            "default": "increase",
+            "options": [
+              {
+                "label": "Increase",
+                "value": "increase"
+              },
+              {
+                "label": "Decrease",
+                "value": "decrease"
+              },
+              {
+                "label": "Set",
+                "value": "set"
+              }
+            ]
+          },
+          {
+            "key": "value",
+            "type": "int",
+            "label": "Value (%)",
+            "default": 10,
+            "min": 0,
+            "max": 100
+          },
+          {
+            "key": "monitor",
+            "type": "choice",
+            "label": "Monitor",
+            "default": "all",
+            "options": [
+              {
+                "label": "All monitors",
+                "value": "all"
+              }
+            ],
+            "options_source": "monitors"
+          }
+        ]
       }
     ],
     "icon_packs": [
@@ -261,6 +439,10 @@
       {
         "name": "brightness_level",
         "description": "First monitor's brightness, 0-100 (empty if no monitor)"
+      },
+      {
+        "pattern": "brightness_level_{monitor}",
+        "description": "Brightness of monitor N (1-based), 0-100"
       }
     ]
   }
