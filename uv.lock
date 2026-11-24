@@ -132,7 +132,7 @@ wheels = [
 [[package]]
 name = "decker"
 version = "0.7.0"
-source = { git = "https://github.com/valsr/decker.git?rev=9c1749c0d18f24ec015aac4b6ac8a43fef4df8fe#9c1749c0d18f24ec015aac4b6ac8a43fef4df8fe" }
+source = { git = "https://github.com/valsr/decker.git?rev=9c2ee9b01306fc03f609347512962f226124548c#9c2ee9b01306fc03f609347512962f226124548c" }
 dependencies = [
     { name = "argcomplete" },
     { name = "cairosvg" },
@@ -170,7 +170,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "decker", git = "https://github.com/valsr/decker.git?rev=9c1749c0d18f24ec015aac4b6ac8a43fef4df8fe" },
+    { name = "decker", git = "https://github.com/valsr/decker.git?rev=9c2ee9b01306fc03f609347512962f226124548c" },
     { name = "packaging", specifier = ">=24" },
 ]
 
