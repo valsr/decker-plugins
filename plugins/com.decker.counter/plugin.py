@@ -1,20 +1,18 @@
-"""Counter action: press adds step, double press adds double_step (if set), long press resets.
+"""Counter: a card that shows a count, and plugin actions that change it.
 
-Settings (always complete: the server fills defaults from the manifest schema):
-    step              int, added on press (default 1)
-    double_step       int or empty, added on double press; empty means no double press, so presses
-                      register immediately (default empty)
-    max               int, wraps to 0 when reached; 0 = no limit (default 0)
+The card's default bindings are press -> count up, double press -> count down, long press -> reset. The count
+lives on the card instance; the actions reach it through ``ctx.card.instance``.
 
-Appearance (background, title) is drawn by Decker; the plugin only renders the count on a transparent
-background.
+Card settings: ``max`` (int, the count wraps to 0 when it reaches it; 0 = no limit).
+Action settings: ``step`` (int, default 1) for count up and count down.
+
+Appearance (background, title) is drawn by Decker; the plugin only draws the count on a transparent background.
 """
 
 import io
 import logging
-from typing import Any
 
-from decker_plugin_sdk import CardContext, DeckerPlugin, Gesture, card
+from decker_plugin_sdk import ActionCallContext, ActionError, CardContext, DeckerPlugin, OwnCardProxy, action, card
 from PIL import Image, ImageDraw, ImageFont
 
 try:
@@ -41,18 +39,22 @@ def _font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     return ImageFont.load_default(size)
 
 
+def _draw(img: Image.Image, count: int) -> None:
+    scale = img.width / _KEY_SIZE
+    ImageDraw.Draw(img).text(
+        (img.width // 2, img.height // 2),
+        str(count),
+        fill=_COUNT_COLOR,
+        font=_font(round(_COUNT_SIZE * scale)),
+        anchor="mm",
+    )
+
+
 def render(count: int) -> bytes:
     """Render the count, centred, on a transparent background."""
     size = _KEY_SIZE * _SCALE
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    centre = size // 2
-    ImageDraw.Draw(img).text(
-        (centre, centre),
-        str(count),
-        fill=_COUNT_COLOR,
-        font=_font(_COUNT_SIZE * _SCALE),
-        anchor="mm",
-    )
+    _draw(img, count)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
@@ -60,41 +62,57 @@ def render(count: int) -> bytes:
 
 @card("com.decker.counter.counter")
 class CounterCard(DeckerPlugin):
-    """Counts presses: press adds step, double press adds double_step, long press resets to 0."""
+    """Shows a count; the Counter actions change it."""
 
     def __init__(self) -> None:
-        self._count: int = 0
-
-    def gestures(self, settings: dict[str, Any]) -> frozenset[Gesture]:
-        """Double press is only registered when double_step is set, so plain presses never wait for it."""
-        wanted = {Gesture.PRESS, Gesture.LONG_PRESS}
-        if settings.get("double_step") is not None:
-            wanted.add(Gesture.DOUBLE_PRESS)
-        return frozenset(wanted)
+        self.count: int = 0
 
     def on_will_appear(self, ctx: CardContext) -> None:
-        self._count = 0
-        self._push(ctx)
-
-    def on_press(self, ctx: CardContext) -> None:
-        self._advance(ctx.settings["step"], ctx.settings["max"])
-        self._push(ctx)
-
-    def on_double_press(self, ctx: CardContext) -> None:
-        self._advance(ctx.settings["double_step"] or 0, ctx.settings["max"])
-        self._push(ctx)
-
-    def on_long_press(self, ctx: CardContext) -> None:
-        self._count = 0
-        self._push(ctx)
+        self.count = 0
+        ctx.queue_paint()
 
     def on_settings_changed(self, ctx: CardContext) -> None:
-        self._push(ctx)
+        ctx.queue_paint()
 
-    def _advance(self, amount: int, max_count: int) -> None:
-        self._count += amount
-        if max_count > 0 and self._count >= max_count:
-            self._count = 0
+    def on_paint(self, ctx: CardContext, img: Image.Image) -> None:  # pylint: disable=unused-argument
+        img.paste((0, 0, 0, 0), (0, 0, *img.size))
+        _draw(img, self.count)
 
-    def _push(self, ctx: CardContext) -> None:
-        ctx.set_image(render(self._count))
+    def advance(self, amount: int, max_count: int) -> None:
+        """Add `amount` (may be negative); wrap to 0 at `max_count` when it is set."""
+        self.count += amount
+        if max_count > 0 and self.count >= max_count:
+            self.count = 0
+
+
+def _own_card(ctx: ActionCallContext) -> tuple[OwnCardProxy, CounterCard]:
+    proxy = ctx.card
+    if not isinstance(proxy, OwnCardProxy) or not isinstance(proxy.instance, CounterCard):
+        raise ActionError("Counter actions need a card")
+    return proxy, proxy.instance
+
+
+def _step(ctx: ActionCallContext, sign: int) -> None:
+    proxy, instance = _own_card(ctx)
+    instance.advance(sign * int(ctx.args["step"]), int(proxy.settings.get("max", 0)))
+    proxy.queue_paint()
+
+
+@action("com.decker.counter.increment")
+def increment(ctx: ActionCallContext) -> None:
+    """Add the step to the card's count."""
+    _step(ctx, 1)
+
+
+@action("com.decker.counter.decrement")
+def decrement(ctx: ActionCallContext) -> None:
+    """Subtract the step from the card's count."""
+    _step(ctx, -1)
+
+
+@action("com.decker.counter.reset")
+def reset(ctx: ActionCallContext) -> None:
+    """Set the card's count to 0."""
+    proxy, instance = _own_card(ctx)
+    instance.count = 0
+    proxy.queue_paint()

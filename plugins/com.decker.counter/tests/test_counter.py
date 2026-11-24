@@ -17,11 +17,18 @@ from decker.plugin.manifest import PluginManifest
 from decker.plugin.settings_schema import apply_schema
 from decker.server.fonts import BUNDLED_FONT_DIR
 from decker_plugin_sdk import run
+from decker_plugin_sdk._actions import registered_actions
 from PIL import Image, ImageFont
 
 _DIR = Path(__file__).parents[1]
-_ACTION = "com.decker.counter.counter"
-_SCHEMA = PluginManifest.load(_DIR / "manifest.json").cards[0].settings
+_CARD = "com.decker.counter.counter"
+_MANIFEST = PluginManifest.load(_DIR / "manifest.json")
+_CARD_SCHEMA = _MANIFEST.cards[0].settings
+_ACTIONS = {spec.id: spec for spec in _MANIFEST.actions}
+_INC = "com.decker.counter.increment"
+_DEC = "com.decker.counter.decrement"
+_RESET = "com.decker.counter.reset"
+_SIZE = 144
 
 
 @pytest.fixture(scope="module", name="counter")
@@ -33,12 +40,12 @@ def counter_fixture() -> ModuleType:
     return module
 
 
-def _settings(**values: Any) -> dict[str, Any]:
-    return apply_schema(_SCHEMA, values)
+def _card_settings(**values: Any) -> dict[str, Any]:
+    return apply_schema(_CARD_SCHEMA, values)
 
 
-def _image(data: bytes) -> Image.Image:
-    return Image.open(io.BytesIO(data)).convert("RGB")
+def _args(action_id: str, **values: Any) -> dict[str, Any]:
+    return apply_schema(_ACTIONS[action_id].settings, values)
 
 
 class Harness:
@@ -46,17 +53,22 @@ class Harness:
 
     def __init__(self, counter: ModuleType) -> None:
         self.seen: list[str] = []
+        self._requests = 0
         in_r, in_w = os.pipe()
         out_r, out_w = os.pipe()
         self._to_plugin = os.fdopen(in_w, "wb")
         self._plugin_in = os.fdopen(in_r, "rb")
         self._plugin_out = os.fdopen(out_w, "wb")
         self._from_plugin = os.fdopen(out_r, "rb")
+        actions = {k: v for k, v in registered_actions().items() if k in _ACTIONS}
         self._thread = threading.Thread(
-            target=run, args=({_ACTION: counter.CounterCard}, self._plugin_in, self._plugin_out)
+            target=run, args=({_CARD: counter.CounterCard}, self._plugin_in, self._plugin_out, actions)
         )
         self._thread.start()
-        self.send("hello", payload={"protocol": 1, "decker_version": "x", "plugin_id": "com.decker.counter"})
+        self.send(
+            "hello",
+            payload={"protocol": 4, "decker_version": "x", "plugin_id": "com.decker.counter", "global_settings": {}},
+        )
         assert_that(self.recv()["event"]).is_equal_to("ready")
 
     def send(self, event: str, context: str | None = None, payload: dict | None = None) -> None:
@@ -79,18 +91,52 @@ class Harness:
             if message["event"] == event:
                 return message
 
+    def _card(self, **values: Any) -> dict[str, Any]:
+        return {
+            "context": "c1",
+            "card": _CARD,
+            "plugin": "com.decker.counter",
+            "device": "d",
+            "key": {"index": 0, "column": 0, "row": 0},
+            "size": [_SIZE, _SIZE],
+            "settings": _card_settings(**values),
+            "last_paint": None,
+        }
+
     def appear(self, **values: Any) -> None:
+        card = self._card(**values)
         self.send(
             "will_appear",
             "c1",
             {
-                "card": _ACTION,
+                "card": _CARD,
                 "device": "d",
-                "key": {"index": 0, "column": 0, "row": 0},
-                "settings": _settings(**values),
+                "key": card["key"],
+                "size": card["size"],
+                "settings": card["settings"],
                 "state": 0,
             },
         )
+
+    def run_action(self, action_id: str, with_card: bool = True, **values: Any) -> dict:
+        """Send run_action and return its action_result payload."""
+        self._requests += 1
+        request = f"r{self._requests}"
+        self.send(
+            "run_action",
+            payload={
+                "action": action_id,
+                "request": request,
+                "args": _args(action_id, **values),
+                "input": "press" if with_card else "plugin",
+                "called_at": "2026-11-21T10:00:00.123+00:00",
+                "card": self._card() if with_card else None,
+                "caller": None,
+                "chain": "ch",
+                "depth": 0,
+            },
+        )
+        return self.recv_until("action_result")["payload"]
 
     def next_png(self) -> bytes:
         return base64.b64decode(self.recv_until("set_image")["payload"]["image"])
@@ -109,75 +155,93 @@ def harness_fixture(counter):
     harness.close()
 
 
-class TestGestures:
-    def test_double_press_registered_only_with_double_step(self, harness):
-        harness.appear()
-        without = harness.recv_until("set_gestures")["payload"]["gestures"]
-        harness.send("settings_changed", "c1", {"settings": _settings(double_step=5)})
-        with_double = harness.recv_until("set_gestures")["payload"]["gestures"]
+def _same_pixels(left: bytes, right: bytes) -> bool:
+    a = Image.open(io.BytesIO(left)).convert("RGBA")
+    b = Image.open(io.BytesIO(right)).convert("RGBA")
+    return a.size == b.size and a.tobytes() == b.tobytes()
 
-        assert_that(without).is_equal_to(["long_press", "press"])
-        assert_that(with_double).is_equal_to(["double_press", "long_press", "press"])
 
-    def test_cleared_double_step_unregisters_it(self, harness):
-        harness.appear(double_step=5)
-        harness.recv_until("set_gestures")
-        harness.send("settings_changed", "c1", {"settings": _settings(double_step=None)})
+class TestManifest:
+    def test_manifest_is_format_3_and_needs_decker_0_7(self):
+        assert_that(_MANIFEST.format).is_equal_to(3)
+        assert_that(_MANIFEST.version).is_equal_to("2.0.0")
+        assert_that(_MANIFEST.decker).is_equal_to(">=0.7")
+        assert_that(_MANIFEST.runtime.requirements).is_equal_to(("pillow>=12",))
 
-        assert_that(harness.recv_until("set_gestures")["payload"]["gestures"]).does_not_contain("double_press")
+    def test_default_bindings_press_double_long(self):
+        bindings = _MANIFEST.cards[0].bindings
+
+        assert_that(bindings["press"].action).is_equal_to(_INC)
+        assert_that(dict(bindings["press"].args)).is_equal_to({"step": 1})
+        assert_that(bindings["double_press"].action).is_equal_to(_DEC)
+        assert_that(dict(bindings["double_press"].args)).is_equal_to({"step": 1})
+        assert_that(bindings["long_press"].action).is_equal_to(_RESET)
+
+    def test_actions_are_plugin_scoped_with_step_settings(self):
+        assert_that({a.scope for a in _MANIFEST.actions}).is_equal_to({"plugin"})
+        assert_that(_args(_INC)).is_equal_to({"step": 1})
+        assert_that(_args(_DEC)).is_equal_to({"step": 1})
+        assert_that(_args(_RESET)).is_equal_to({})
+
+    def test_card_settings_keep_only_max(self):
+        assert_that(_card_settings()).is_equal_to({"max": 0})
+        assert_that(_card_settings(step=5, background="#102030")).is_equal_to({"max": 0})
+
+    def test_manifest_declares_the_blue_background_default(self):
+        assert_that(_MANIFEST.cards[0].appearance).is_equal_to({"background": "#1f618d"})
 
 
 class TestCounting:
-    def test_press_increments(self, harness, counter):
-        harness.appear(step=3)
-        assert_that(harness.next_png()).is_equal_to(counter.render(0))
+    def test_increment_adds_step_and_repaints(self, harness, counter):
+        harness.appear()
+        assert_that(_same_pixels(harness.next_png(), counter.render(0))).is_true()
 
-        harness.send("press", "c1")
-        assert_that(harness.next_png()).is_equal_to(counter.render(3))
-        harness.send("press", "c1")
-        assert_that(harness.next_png()).is_equal_to(counter.render(6))
+        result = harness.run_action(_INC, step=3)
 
-    def test_default_step_is_one(self, harness, counter):
+        assert_that(result["ok"]).is_true()
+        assert_that(_same_pixels(harness.next_png(), counter.render(3))).is_true()
+        harness.run_action(_INC, step=3)
+        assert_that(_same_pixels(harness.next_png(), counter.render(6))).is_true()
+
+    def test_decrement_subtracts_step(self, harness, counter):
         harness.appear()
         harness.next_png()
-
-        harness.send("press", "c1")
-
-        assert_that(harness.next_png()).is_equal_to(counter.render(1))
-
-    def test_double_press_adds_double_step(self, harness, counter):
-        harness.appear(step=1, double_step=10)
+        harness.run_action(_INC, step=10)
         harness.next_png()
 
-        harness.send("press", "c1")
-        harness.next_png()
-        harness.send("double_press", "c1")
+        harness.run_action(_DEC, step=4)
 
-        assert_that(harness.next_png()).is_equal_to(counter.render(11))
+        assert_that(_same_pixels(harness.next_png(), counter.render(6))).is_true()
 
-    def test_long_press_resets(self, harness, counter):
-        harness.appear(step=4)
-        harness.next_png()
-        harness.send("press", "c1")
-        harness.next_png()
-
-        harness.send("long_press", "c1")
-
-        assert_that(harness.next_png()).is_equal_to(counter.render(0))
-
-    def test_max_wraps(self, harness, counter):
-        harness.appear(step=2, max=4)
-        harness.next_png()
-
-        harness.send("press", "c1")
-        assert_that(harness.next_png()).is_equal_to(counter.render(2))
-        harness.send("press", "c1")
-        assert_that(harness.next_png()).is_equal_to(counter.render(0))
-
-    def test_counter_no_longer_sets_title(self, harness):
+    def test_reset_returns_to_zero(self, harness, counter):
         harness.appear()
         harness.next_png()
-        harness.send("press", "c1")
+        harness.run_action(_INC, step=4)
+        harness.next_png()
+
+        harness.run_action(_RESET)
+
+        assert_that(_same_pixels(harness.next_png(), counter.render(0))).is_true()
+
+    def test_max_wraps_to_zero(self, harness, counter):
+        harness.appear(max=4)
+        harness.next_png()
+
+        harness.run_action(_INC, step=2)
+        assert_that(_same_pixels(harness.next_png(), counter.render(2))).is_true()
+        harness.run_action(_INC, step=2)
+        assert_that(_same_pixels(harness.next_png(), counter.render(0))).is_true()
+
+    def test_action_without_card_fails_cleanly(self, harness):
+        result = harness.run_action(_INC, with_card=False)
+
+        assert_that(result["ok"]).is_false()
+        assert_that(result["error"]).is_equal_to("Counter actions need a card")
+
+    def test_counter_never_sets_title(self, harness):
+        harness.appear()
+        harness.next_png()
+        harness.run_action(_INC)
         harness.next_png()
 
         assert_that(harness.seen).does_not_contain("set_title")
@@ -186,25 +250,16 @@ class TestCounting:
         harness.appear()
         harness.next_png()
 
-        harness.send("settings_changed", "c1", {"settings": _settings(step=2)})
+        harness.send("settings_changed", "c1", {"settings": _card_settings(max=9)})
 
         assert_that(harness.next_png()).is_not_empty()
 
+    def test_count_rendering_is_unchanged(self, harness, counter):
+        harness.appear()
+        harness.next_png()
+        harness.run_action(_INC, step=42)
 
-class TestSettingsSchema:
-    def test_empty_double_step_becomes_none(self):
-        assert_that(_settings(double_step="")["double_step"]).is_none()
-
-    def test_defaults_match_the_original_counter(self):
-        assert_that(_settings()).is_equal_to({"step": 1, "double_step": None, "max": 0})
-
-    def test_appearance_keys_are_no_longer_settings(self):
-        assert_that(_settings(background="#102030", title="Hi")).is_equal_to({"step": 1, "double_step": None, "max": 0})
-
-    def test_manifest_declares_the_blue_background_default(self):
-        spec = PluginManifest.load(_DIR / "manifest.json").cards[0]
-
-        assert_that(spec.appearance).is_equal_to({"background": "#1f618d"})
+        assert_that(_same_pixels(harness.next_png(), counter.render(42))).is_true()
 
 
 class TestRender:
