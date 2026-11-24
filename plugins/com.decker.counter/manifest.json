@@ -1,32 +1,63 @@
 {
-  "format": 2,
+  "format": 3,
   "id": "com.decker.counter",
   "name": "Counter",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "author": "Decker",
   "description": "Counts key presses.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/counter",
   "category": "Utilities",
-  "decker": ">=0.6",
+  "decker": ">=0.7",
   "runtime": { "type": "python", "entry": "plugin.py", "requirements": ["pillow>=12"] },
   "contributes": {
     "cards": [
       {
         "id": "com.decker.counter.counter",
         "name": "Counter",
-        "tooltip": "Press to count, long press to reset",
+        "tooltip": "Press to count up, double press to count down, long press to reset",
         "icon": "icons/counter",
-        "gestures": ["press", "long_press"],
         "appearance": { "background": "#1f618d" },
+        "bindings": {
+          "press": { "action": "com.decker.counter.increment", "args": { "step": 1 } },
+          "double_press": { "action": "com.decker.counter.decrement", "args": { "step": 1 } },
+          "long_press": { "action": "com.decker.counter.reset" }
+        },
         "settings": [
           { "section": "Counting" },
-          { "key": "step", "type": "int", "label": "Step", "default": 1, "min": 1, "max": 9999 },
-          { "key": "double_step", "type": "int", "label": "Double press step", "optional": true,
-            "placeholder": "None (presses register immediately)", "min": -9999, "max": 9999 },
           { "key": "max", "type": "int", "label": "Max count", "default": 0, "min": 0, "max": 99999,
             "special_value": "∞ (no limit)" }
         ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "com.decker.counter.increment",
+        "name": "Count up",
+        "tooltip": "Adds the step to the Counter card's count",
+        "icon": "icons/counter",
+        "scope": "plugin",
+        "settings": [
+          { "key": "step", "type": "int", "label": "Step", "default": 1, "min": 1, "max": 9999 }
+        ]
+      },
+      {
+        "id": "com.decker.counter.decrement",
+        "name": "Count down",
+        "tooltip": "Subtracts the step from the Counter card's count",
+        "icon": "icons/counter",
+        "scope": "plugin",
+        "settings": [
+          { "key": "step", "type": "int", "label": "Step", "default": 1, "min": 1, "max": 9999 }
+        ]
+      },
+      {
+        "id": "com.decker.counter.reset",
+        "name": "Reset count",
+        "tooltip": "Sets the Counter card's count back to 0",
+        "icon": "icons/counter",
+        "scope": "plugin",
+        "settings": []
       }
     ],
     "icon_packs": [
