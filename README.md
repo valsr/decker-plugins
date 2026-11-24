@@ -64,8 +64,8 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 [^1]: CI means the GitHub Actions workflow
     ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
     `ubuntu-latest`, `windows-latest`, `macos-latest` and in `fedora:latest` and `archlinux:latest` containers. On each
-    it ran the tool tests (33 passed) and the five
-    plugin suites (counter 19, icon 8, pages 36, profiles 30 passed) against the pinned Decker,
+    it ran the tool tests (33 passed) and the
+    plugin suites (counter 19, pages 36, profiles 30 passed) against the pinned Decker,
     including Counter's font path with the bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
     cover a real Stream Deck, the real Decker UI, or a real plugin process under the Decker supervisor on any OS.
 [^2]: Since 1.1.0 Counter draws with Decker's bundled DejaVu Sans Bold through the SDK (`decker_plugin_sdk.fonts`) on
@@ -76,6 +76,6 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
     can break without a change here). It covers Arch, not the Plasma desktop or Wayland, and the maintainer has not
     yet used the plugins there, so the cell is ✅ on CI evidence alone.
 
-Pages, Profiles and Icon use no OS APIs. No manifest declares `platforms` or `linux`, which means all
+Pages and Profiles use no OS APIs. No manifest declares `platforms` or `linux`, which means all
 platforms; the table above records what has been verified, not what the manifests restrict.
 

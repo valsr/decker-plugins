@@ -1,5 +1,6 @@
 """Manifest, assets and packaging of the Profiles plugin (com.decker.profiles)."""
 
+import hashlib
 import shutil
 import zipfile
 from pathlib import Path
@@ -76,9 +77,17 @@ def test_action_and_card_settings(manifest: PluginManifest) -> None:
     assert_that(goto_card.bindings["press"].action).is_equal_to("com.decker.profiles.goto")
 
 
+_CARET_SHA256 = {
+    "caret-left.svg": "f95fa8fd4f2dccda0c4d7f4ae3d1cd80613d9afd82fc89dd3d3529511b61ca62",
+    "caret-right.svg": "b9cf6c594d6a0ca9dc426107d3df78b7495dc136ad883dc5f0c80984dd7af77e",
+}
+
+
 @pytest.mark.parametrize("name", ["caret-left.svg", "caret-right.svg"])
 def test_caret_assets_are_the_font_awesome_originals(name: str) -> None:
-    svg = (_DIR / "assets" / name).read_text(encoding="utf-8")
+    raw = (_DIR / "assets" / name).read_bytes()
+    assert_that(hashlib.sha256(raw).hexdigest()).is_equal_to(_CARET_SHA256[name])
+    svg = raw.decode("utf-8")
     assert_that(svg).starts_with("<svg").contains("Font Awesome Free 7.3.1 by @fontawesome", 'fill="currentColor"')
 
 
