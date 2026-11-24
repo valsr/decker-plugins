@@ -10,6 +10,7 @@ from typing import Any
 
 from assertpy import assert_that
 from decker_plugin_sdk import run
+from decker_plugin_sdk._actions import registered_actions
 
 PLUGIN_DIR = Path(__file__).parents[1]
 CONTEXT = "c1"
@@ -23,11 +24,18 @@ def load_plugin() -> ModuleType:
     return module
 
 
+def goto_bindings(page: Any, action: str = "com.decker.pages.goto") -> dict[str, Any]:
+    """Effective bindings of a Go To card whose press goes to `page`."""
+    return {"press": {"action": action, "args": {"profile": "", "page": page}}}
+
+
 class Harness:
-    """One action class on os.pipe streams."""
+    """One card class (and the plugin's actions) on os.pipe streams."""
 
     def __init__(self, plugin: ModuleType, action_id: str, class_name: str) -> None:
         self.action_id = action_id
+        self._requests = 0
+        self.sent: list[dict] = []
         self._line = b""
         in_r, in_w = os.pipe()
         out_r, out_w = os.pipe()
@@ -36,10 +44,19 @@ class Harness:
         self._plugin_out = os.fdopen(out_w, "wb")
         self._from_plugin = os.fdopen(out_r, "rb")
         self._thread = threading.Thread(
-            target=run, args=({action_id: getattr(plugin, class_name)}, self._plugin_in, self._plugin_out)
+            target=run,
+            args=(
+                {action_id: getattr(plugin, class_name)},
+                self._plugin_in,
+                self._plugin_out,
+                {k: v for k, v in registered_actions().items() if k.startswith("com.decker.pages.")},
+            ),
         )
         self._thread.start()
-        self.send("hello", payload={"protocol": 1, "decker_version": "x", "plugin_id": "com.decker.pages"})
+        self.send(
+            "hello",
+            payload={"protocol": 4, "decker_version": "x", "plugin_id": "com.decker.pages", "global_settings": {}},
+        )
         assert_that(self.recv()["event"]).is_equal_to("ready")
 
     def send(self, event: str, context: str | None = None, payload: dict | None = None) -> None:
@@ -73,8 +90,7 @@ class Harness:
         Events of one key are handled in order on a queue, so a final settings change that makes a Go To key
         send a recognisable title is a barrier: once it arrives, nothing earlier is still on its way.
         """
-        sentinel = {"page": {"page_id": "sentinel", "name": "SENTINEL", "index": 1}}
-        self.change(sentinel)
+        self.change({}, goto_bindings({"page_id": "sentinel", "name": "SENTINEL", "index": 1}))
         seen: list[dict] = []
         while True:
             message = self.recv()
@@ -82,7 +98,7 @@ class Harness:
                 return seen
             seen.append(message)
 
-    def appear(self, settings: dict[str, Any]) -> None:
+    def appear(self, settings: dict[str, Any], bindings: dict[str, Any] | None = None) -> None:
         self.send(
             "will_appear",
             CONTEXT,
@@ -91,15 +107,51 @@ class Harness:
                 "device": "d",
                 "key": {"index": 0, "column": 0, "row": 0},
                 "settings": settings,
+                "bindings": bindings or {},
                 "state": 0,
             },
         )
 
-    def change(self, settings: dict[str, Any]) -> None:
-        self.send("settings_changed", CONTEXT, {"settings": settings})
+    def change(self, settings: dict[str, Any], bindings: dict[str, Any] | None = None) -> None:
+        self.send("settings_changed", CONTEXT, {"settings": settings, "bindings": bindings or {}})
 
-    def press(self) -> None:
-        self.send("press", CONTEXT)
+    def run_action(self, action_id: str, args: dict[str, Any], with_card: bool = True) -> dict:
+        """Send run_action (with this key as the card) and return its action_result payload."""
+        self._requests += 1
+        card = {
+            "context": CONTEXT,
+            "card": self.action_id,
+            "plugin": "com.decker.pages",
+            "device": "d",
+            "key": {"index": 0, "column": 0, "row": 0},
+            "size": [72, 72],
+            "settings": {},
+            "last_paint": None,
+        }
+        self.send(
+            "run_action",
+            payload={
+                "action": action_id,
+                "request": f"r{self._requests}",
+                "args": args,
+                "input": "press" if with_card else "plugin",
+                "called_at": "2026-11-21T10:00:00.123+00:00",
+                "card": card if with_card else None,
+                "caller": None,
+                "chain": "ch",
+                "depth": 0,
+            },
+        )
+        self.sent = []
+        while True:
+            message = self.recv()
+            if message["event"] == "action_result":
+                return message["payload"]
+            self.sent.append(message)
+
+    def sent_payloads(self, event: str) -> list[dict]:
+        """Payloads (minus the request id) of `event` messages sent before the last action_result."""
+        return [{k: v for k, v in m["payload"].items() if k != "request"} for m in self.sent if m["event"] == event]
 
     def close(self) -> None:
         self.send("shutdown")

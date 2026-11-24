@@ -41,7 +41,7 @@ def previous_fixture(plugin: ModuleType):
 
 
 def _settings(**values: Any) -> dict[str, Any]:
-    return {"wrap": False, "color": "#ffffff", **values}
+    return {"color": "#ffffff", **values}
 
 
 def _svg(message: dict) -> bytes:
@@ -128,31 +128,33 @@ def test_settings_changed_redraws_with_the_new_colour(next_key: Harness) -> None
     assert_that(image.getpixel((_SIZE // 2, _SIZE // 2))).is_equal_to((0, 255, 0, 255))
 
 
-def test_press_sends_switch_page_next_with_wrap_false_by_default(next_key: Harness) -> None:
-    next_key.appear(_settings())
-    next_key.recv_until("set_image")
+def test_next_action_switches_the_card_device_page_with_wrap(next_key: Harness) -> None:
+    result = next_key.run_action(_NEXT, {"wrap": True})
 
-    next_key.press()
-
-    assert_that(next_key.recv_until("switch_page")["payload"]).is_equal_to({"to": "next", "wrap": False})
+    assert_that(result["ok"]).is_true()
+    assert_that(next_key.sent_payloads("switch_page")).is_equal_to([{"to": "next", "wrap": True}])
 
 
-def test_press_sends_wrap_true_when_enabled(next_key: Harness) -> None:
-    next_key.appear(_settings(wrap=True))
-    next_key.recv_until("set_image")
+def test_next_action_wraps_nothing_by_default(next_key: Harness) -> None:
+    next_key.run_action(_NEXT, {"wrap": False})
 
-    next_key.press()
-
-    assert_that(next_key.recv_until("switch_page")["payload"]).is_equal_to({"to": "next", "wrap": True})
+    assert_that(next_key.sent_payloads("switch_page")).is_equal_to([{"to": "next", "wrap": False}])
 
 
-def test_previous_press_sends_previous(previous_key: Harness) -> None:
-    previous_key.appear(_settings())
-    previous_key.recv_until("set_image")
+def test_previous_action(previous_key: Harness) -> None:
+    result = previous_key.run_action(_PREVIOUS, {"wrap": False})
 
-    previous_key.press()
+    assert_that(result["ok"]).is_true()
+    assert_that(previous_key.sent_payloads("switch_page")).is_equal_to([{"to": "previous", "wrap": False}])
 
-    assert_that(previous_key.recv_until("switch_page")["payload"]).is_equal_to({"to": "previous", "wrap": False})
+
+@pytest.mark.parametrize("action_id", [_NEXT, _PREVIOUS])
+def test_actions_without_a_card_fail(next_key: Harness, action_id: str) -> None:
+    result = next_key.run_action(action_id, {"wrap": False}, with_card=False)
+
+    assert_that(result["ok"]).is_false()
+    assert_that(result["error"]).is_equal_to("needs a card")
+    assert_that(next_key.sent_payloads("switch_page")).is_empty()
 
 
 def test_render_caret_leaves_other_svg_content_alone(plugin: ModuleType) -> None:

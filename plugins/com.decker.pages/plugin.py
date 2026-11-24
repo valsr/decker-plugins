@@ -1,4 +1,4 @@
-"""Pages plugin: next, previous and go-to-page keys.
+"""Pages plugin: next, previous and go-to-page actions, and the cards that bind them.
 
 Next and Previous draw the plugin's own Font Awesome caret (``assets/``), recoloured and centred at about 60% of the
 key. The caret SVGs use ``currentColor``, which renders black, so the chosen colour is substituted into the SVG.
@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from decker_plugin_sdk import CardContext, DeckerPlugin, card
+from decker_plugin_sdk import ActionCallContext, ActionError, CardContext, CardProxy, DeckerPlugin, action, card
 
 _ASSETS = Path(__file__).parent / "assets"
 _COLOUR = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
@@ -44,9 +44,8 @@ def render_caret(svg: bytes, color: Any, ink: tuple[float, float, float, float] 
 
 
 class ArrowCard(DeckerPlugin):
-    """Shared behaviour of the Next and Previous keys."""
+    """Shared behaviour of the Next and Previous keys: they draw the caret; their press binding does the rest."""
 
-    direction = "next"
     asset = "caret-right.svg"
     ink: tuple[float, float, float, float] = (64, 96, 256, 416)
 
@@ -55,9 +54,6 @@ class ArrowCard(DeckerPlugin):
 
     def on_settings_changed(self, ctx: CardContext) -> None:
         self._draw(ctx)
-
-    def on_press(self, ctx: CardContext) -> None:
-        ctx.switch_page(self.direction, wrap=ctx.settings.get("wrap") is True)
 
     def _draw(self, ctx: CardContext) -> None:
         svg = (_ASSETS / self.asset).read_bytes()
@@ -68,7 +64,6 @@ class ArrowCard(DeckerPlugin):
 class NextCard(ArrowCard):
     """Next page key."""
 
-    direction = "next"
     asset = "caret-right.svg"
 
 
@@ -76,14 +71,30 @@ class NextCard(ArrowCard):
 class PreviousCard(ArrowCard):
     """Previous page key."""
 
-    direction = "previous"
     asset = "caret-left.svg"
     ink = (0, 95, 193, 416)
 
 
-def _chosen_page(settings: dict[str, Any]) -> tuple[str, str]:
-    """(page id, page name) of the ``page`` setting, or ("", "") for none, a deleted page or garbage."""
-    value = settings.get("page")
+def _needs_card(ctx: ActionCallContext) -> CardProxy:
+    if ctx.card is None:
+        raise ActionError("needs a card")
+    return ctx.card
+
+
+@action("com.decker.pages.next")
+def next_page(ctx: ActionCallContext) -> None:
+    """Switch the card's device to its next page."""
+    _needs_card(ctx).switch_page("next", wrap=ctx.args.get("wrap") is True)
+
+
+@action("com.decker.pages.previous")
+def previous_page(ctx: ActionCallContext) -> None:
+    """Switch the card's device to its previous page."""
+    _needs_card(ctx).switch_page("previous", wrap=ctx.args.get("wrap") is True)
+
+
+def _chosen_page(value: Any) -> tuple[str, str]:
+    """(page id, page name) of a ``page`` value, or ("", "") for none, a deleted page or garbage."""
     if not isinstance(value, dict):
         return "", ""
     page_id, name = value.get("page_id"), value.get("name")
@@ -92,9 +103,26 @@ def _chosen_page(settings: dict[str, Any]) -> tuple[str, str]:
     return page_id, name if isinstance(name, str) else ""
 
 
+@action("com.decker.pages.goto")
+def goto(ctx: ActionCallContext) -> None:
+    """Go to the chosen page; a missing page does nothing."""
+    proxy = _needs_card(ctx)
+    page_id, _name = _chosen_page(ctx.args.get("page"))
+    if page_id:
+        proxy.go_to_page(page_id)
+
+
+def _press_page(bindings: Any) -> tuple[str, str]:
+    press = bindings.get("press") if isinstance(bindings, dict) else None
+    if not isinstance(press, dict) or press.get("action") != "com.decker.pages.goto":
+        return "", ""
+    args = press.get("args")
+    return _chosen_page(args.get("page") if isinstance(args, dict) else None)
+
+
 @card("com.decker.pages.goto")
 class GotoCard(DeckerPlugin):
-    """Titled "Go To <page name>"; a press goes to the chosen page."""
+    """Titled "Go To <page name>" after the page its press binding goes to."""
 
     def on_will_appear(self, ctx: CardContext) -> None:
         self._title(ctx)
@@ -102,12 +130,7 @@ class GotoCard(DeckerPlugin):
     def on_settings_changed(self, ctx: CardContext) -> None:
         self._title(ctx)
 
-    def on_press(self, ctx: CardContext) -> None:
-        page_id, _name = _chosen_page(ctx.settings)
-        if page_id:
-            ctx.go_to_page(page_id)
-
     @staticmethod
     def _title(ctx: CardContext) -> None:
-        page_id, name = _chosen_page(ctx.settings)
+        page_id, name = _press_page(ctx.bindings)
         ctx.set_title(f"Go To {name}" if page_id and name else "")
