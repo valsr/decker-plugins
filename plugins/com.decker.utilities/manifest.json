@@ -377,6 +377,112 @@
             }
           }
         }
+      },
+      {
+        "id": "com.decker.utilities.timer",
+        "name": "Timer",
+        "tooltip": "A countdown timer: press to start, pause or resume it, double or long press to reset it; it rings when it ends",
+        "icon": "fas:stopwatch",
+        "appearance": {
+          "background": "#000000"
+        },
+        "settings": [
+          {
+            "key": "minutes",
+            "type": "int",
+            "label": "Minutes",
+            "default": 5,
+            "min": 0,
+            "max": 1440
+          },
+          {
+            "key": "seconds",
+            "type": "int",
+            "label": "Seconds",
+            "default": 0,
+            "min": 0,
+            "max": 59
+          },
+          {
+            "key": "show_time",
+            "type": "bool",
+            "label": "Show time",
+            "default": true
+          },
+          {
+            "key": "show_progress",
+            "type": "bool",
+            "label": "Show progress",
+            "default": true
+          },
+          {
+            "key": "progress_type",
+            "type": "choice",
+            "label": "Progress",
+            "default": "circle",
+            "options": [
+              {
+                "label": "Circle",
+                "value": "circle"
+              },
+              {
+                "label": "Bar",
+                "value": "bar"
+              }
+            ]
+          },
+          {
+            "key": "color_mode",
+            "type": "choice",
+            "label": "Colour mode",
+            "default": "solid",
+            "options": [
+              {
+                "label": "Solid",
+                "value": "solid"
+              },
+              {
+                "label": "Two colours (second at 20% left)",
+                "value": "bicolor"
+              },
+              {
+                "label": "Gradient",
+                "value": "gradient"
+              }
+            ]
+          },
+          {
+            "key": "color",
+            "type": "color",
+            "label": "Colour",
+            "default": "#2ecc71"
+          },
+          {
+            "key": "color_2",
+            "type": "color",
+            "label": "Second colour",
+            "default": "#e74c3c"
+          },
+          {
+            "key": "line_width",
+            "type": "int",
+            "label": "Line width",
+            "default": 6,
+            "min": 1,
+            "max": 20
+          }
+        ],
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.timer-toggle"
+          },
+          "double_press": {
+            "action": "com.decker.utilities.timer-reset"
+          },
+          "long_press": {
+            "action": "com.decker.utilities.timer-reset"
+          }
+        }
       }
     ],
     "actions": [
@@ -645,6 +751,22 @@
         "icon": "fas:ban",
         "scope": "global",
         "returns": "How many countdowns were cancelled",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.timer-toggle",
+        "name": "Timer start or pause",
+        "tooltip": "Starts this Timer card, pauses it while it runs, resumes it while paused, restarts it when it has finished",
+        "icon": "fas:stopwatch",
+        "scope": "plugin",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.timer-reset",
+        "name": "Timer reset",
+        "tooltip": "Stops this Timer card and shows its full duration again",
+        "icon": "fas:rotate-left",
+        "scope": "plugin",
         "settings": []
       }
     ],
