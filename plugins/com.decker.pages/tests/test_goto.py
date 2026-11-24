@@ -9,7 +9,7 @@ import pytest
 from assertpy import assert_that
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _pages_harness import Harness, goto_bindings, load_plugin  # noqa: E402
+from _pages_harness import Harness, goto_bindings, load_plugin, server_goto_bindings  # noqa: E402
 
 _ACTION = "com.decker.pages.goto"
 
@@ -103,3 +103,18 @@ def test_names_with_braces_or_newlines_are_passed_through_as_text(key: Harness) 
     _appear(key, {**_PAGE, "name": "A {b}\nC"})
 
     assert_that(key.recv_until("set_title")["payload"]).is_equal_to({"title": "Go To A {b}\nC"})
+
+
+def test_goto_card_titles_itself_from_the_bindings_the_server_really_sends(key: Harness) -> None:
+    key.appear({}, server_goto_bindings("p2"))
+
+    assert_that(key.recv_until("set_title")["payload"]).is_equal_to({"title": "Go To Settings"})
+
+
+def test_goto_card_follows_a_rename_in_the_server_resolved_bindings(key: Harness) -> None:
+    key.appear({}, server_goto_bindings("p2"))
+    key.recv_until("set_title")
+
+    key.change({}, server_goto_bindings("p2", pages=(("p1", "Home"), ("p2", "Renamed"))))
+
+    assert_that(key.recv_until("set_title")["payload"]).is_equal_to({"title": "Go To Renamed"})

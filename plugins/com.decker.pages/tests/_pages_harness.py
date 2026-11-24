@@ -9,6 +9,9 @@ from types import ModuleType
 from typing import Any
 
 from assertpy import assert_that
+from decker.common.model import PageInfo, ProfileInfo
+from decker.plugin.manifest import PluginManifest
+from decker.server.page_vars import DeviceLayout, deliver_settings
 from decker_plugin_sdk import run
 from decker_plugin_sdk._actions import registered_actions
 
@@ -25,8 +28,35 @@ def load_plugin() -> ModuleType:
 
 
 def goto_bindings(page: Any, action: str = "com.decker.pages.goto") -> dict[str, Any]:
-    """Effective bindings of a Go To card whose press goes to `page`."""
+    """Hand-made bindings of a Go To card whose press goes to `page` (any shape, including garbage).
+
+    The shape the server really sends comes from `server_goto_bindings`.
+    """
     return {"press": {"action": action, "args": {"profile": "", "page": page}}}
+
+
+def server_goto_bindings(
+    page_id: str,
+    pages: tuple[tuple[str, str], ...] = (("p1", "Home"), ("p2", "Settings")),
+    action: str = "com.decker.pages.goto",
+) -> dict[str, Any]:
+    """The bindings Decker really sends a Go To card: the stored page id resolved by Decker's own code.
+
+    Builds a one-profile layout of `pages` ((id, name) pairs) and delivers the stored `page` argument through
+    ``deliver_settings`` with the action's schema from the plugin's own manifest, as the server does.
+    """
+    manifest = PluginManifest.load(PLUGIN_DIR / "manifest.json")
+    spec = next(a for a in manifest.actions if a.id == action)
+    infos = tuple(PageInfo(pid, name) for pid, name in pages)
+    layout = DeviceLayout(
+        pages=infos,
+        active_page_id=infos[0].page_id,
+        profiles=(ProfileInfo(0, "Default"),),
+        active_profile_id=0,
+        pages_by_profile={0: infos},
+    )
+    args = deliver_settings(spec.settings, {"profile": "", "page": page_id}, layout, {})
+    return {"press": {"action": action, "args": args}}
 
 
 class Harness:
@@ -90,7 +120,7 @@ class Harness:
         Events of one key are handled in order on a queue, so a final settings change that makes a Go To key
         send a recognisable title is a barrier: once it arrives, nothing earlier is still on its way.
         """
-        self.change({}, goto_bindings({"page_id": "sentinel", "name": "SENTINEL", "index": 1}))
+        self.change({}, server_goto_bindings("sentinel", pages=(("sentinel", "SENTINEL"),)))
         seen: list[dict] = []
         while True:
             message = self.recv()

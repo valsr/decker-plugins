@@ -9,6 +9,9 @@ from types import ModuleType
 from typing import Any
 
 from assertpy import assert_that
+from decker.common.model import ProfileInfo
+from decker.plugin.manifest import PluginManifest
+from decker.server.page_vars import DeviceLayout, deliver_settings
 from decker_plugin_sdk import run
 from decker_plugin_sdk._actions import registered_actions
 
@@ -25,8 +28,29 @@ def load_plugin() -> ModuleType:
 
 
 def goto_bindings(profile: Any, action: str = "com.decker.profiles.goto") -> dict[str, Any]:
-    """Effective bindings of a Go To card whose press goes to `profile`."""
+    """Hand-made bindings of a Go To card whose press goes to `profile` (any shape, including garbage).
+
+    The shape the server really sends comes from `server_goto_bindings`.
+    """
     return {"press": {"action": action, "args": {"profile": profile}}}
+
+
+def server_goto_bindings(
+    profile_id: str,
+    profiles: tuple[tuple[int, str, str], ...] = ((0, "Default", ""), (2, "Work", "pack:a/b.svg")),
+    action: str = "com.decker.profiles.goto",
+) -> dict[str, Any]:
+    """The bindings Decker really sends a Go To card: the stored profile id resolved by Decker's own code.
+
+    Builds a layout of `profiles` ((id, name, icon) triples) and delivers the stored `profile` argument through
+    ``deliver_settings`` with the action's schema from the plugin's own manifest, as the server does.
+    """
+    manifest = PluginManifest.load(PLUGIN_DIR / "manifest.json")
+    spec = next(a for a in manifest.actions if a.id == action)
+    infos = tuple(ProfileInfo(pid, name, icon) for pid, name, icon in profiles)
+    layout = DeviceLayout(profiles=infos, active_profile_id=infos[0].profile_id)
+    args = deliver_settings(spec.settings, {"profile": profile_id}, layout, {})
+    return {"press": {"action": action, "args": args}}
 
 
 class Harness:
@@ -91,7 +115,7 @@ class Harness:
         Events of one key are handled in order on a queue, so a final settings change that makes a Go To key
         send a recognisable title is a barrier: once it arrives, nothing earlier is still on its way.
         """
-        self.change({}, goto_bindings({"profile_id": 99, "name": "SENTINEL", "index": 1, "icon": "decker:logo"}))
+        self.change({}, server_goto_bindings("99", profiles=((99, "SENTINEL", ""),)))
         seen: list[dict] = []
         while True:
             message = self.recv()
