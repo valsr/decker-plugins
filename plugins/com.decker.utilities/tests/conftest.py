@@ -11,6 +11,7 @@ from brightness import Monitor  # noqa: E402
 from deck_brightness import reset_for_tests  # noqa: E402
 from display_brightness import set_backend_for_tests  # noqa: E402
 from sleep_card import reset_for_tests as reset_sleep  # noqa: E402
+from timer_card import reset_for_tests as reset_timers  # noqa: E402
 
 
 class _NoMonitors:
@@ -29,6 +30,7 @@ def hardware_free() -> Iterator[None]:
     set_backend_for_tests(_NoMonitors())
     reset_for_tests()
     reset_sleep()
+    reset_timers()
     yield
     set_backend_for_tests(_NoMonitors())
 
