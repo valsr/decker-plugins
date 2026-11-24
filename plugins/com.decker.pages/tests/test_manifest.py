@@ -27,18 +27,26 @@ def _fields(spec) -> dict[str, SettingField]:
     return {f.key: f for f in spec.settings if isinstance(f, SettingField)}
 
 
-def test_manifest_is_valid_and_gated_on_0_5(manifest: PluginManifest) -> None:
+def test_manifest_is_format_3_with_global_actions(manifest: PluginManifest) -> None:
     assert_that(manifest.id).is_equal_to(_PLUGIN_ID)
     assert_that(manifest.name).is_equal_to("Pages")
-    assert_that(manifest.version).is_equal_to("1.3.0")
-    assert_that(manifest.decker).is_equal_to(">=0.6")
-    assert_that(is_compatible(manifest.decker, "0.5.0")).is_false()
-    assert_that(is_compatible(manifest.decker, "0.6.0")).is_true()
+    assert_that(manifest.format).is_equal_to(3)
+    assert_that(manifest.version).is_equal_to("2.0.0")
+    assert_that(manifest.decker).is_equal_to(">=0.7")
+    assert_that(is_compatible(manifest.decker, "0.6.0")).is_false()
+    assert_that(is_compatible(manifest.decker, "0.7.0")).is_true()
     assert_that(manifest.runtime).is_not_none()
     assert_that(manifest.runtime.requirements).is_empty()  # type: ignore[union-attr]
+    assert_that({a.id: a.scope for a in manifest.actions}).is_equal_to(
+        {
+            "com.decker.pages.next": "global",
+            "com.decker.pages.previous": "global",
+            "com.decker.pages.goto": "global",
+        }
+    )
 
 
-def test_three_actions_with_the_expected_ids_and_static_flags(manifest: PluginManifest) -> None:
+def test_three_cards_with_the_expected_ids_and_static_flags(manifest: PluginManifest) -> None:
     assert_that({a.id: a.static for a in manifest.cards}).is_equal_to(
         {
             "com.decker.pages.next": False,
@@ -48,21 +56,28 @@ def test_three_actions_with_the_expected_ids_and_static_flags(manifest: PluginMa
     )
 
 
-def test_runtime_action_settings(manifest: PluginManifest) -> None:
-    specs = {a.id: a for a in manifest.cards}
+def test_action_and_card_settings(manifest: PluginManifest) -> None:
+    cards = {c.id: c for c in manifest.cards}
+    actions = {a.id: a for a in manifest.actions}
     for key in ("next", "previous"):
-        fields = _fields(specs[f"com.decker.pages.{key}"])
-        assert_that(list(fields)).is_equal_to(["wrap", "color"])
-        assert_that(fields["wrap"].type).is_equal_to("bool")
-        assert_that(fields["wrap"].default).is_false()
+        wrap = _fields(actions[f"com.decker.pages.{key}"])
+        assert_that([(k, f.type, f.default) for k, f in wrap.items()]).is_equal_to([("wrap", "bool", False)])
+        fields = _fields(cards[f"com.decker.pages.{key}"])
+        assert_that(list(fields)).is_equal_to(["color"])
         assert_that(fields["color"].type).is_equal_to("color")
         assert_that(fields["color"].extra["alpha"]).is_true()
         assert_that(fields["color"].default).is_equal_to("#ffffff")
-    goto = _fields(specs["com.decker.pages.goto"])
+        binding = cards[f"com.decker.pages.{key}"].bindings["press"]
+        assert_that(binding.action).is_equal_to(f"com.decker.pages.{key}")
+        assert_that(dict(binding.args)).is_equal_to({"wrap": False})
+    goto = _fields(actions["com.decker.pages.goto"])
     assert_that([(k, f.type, f.default) for k, f in goto.items()]).is_equal_to(
         [("profile", "profile", ""), ("page", "page", "")]
     )
     assert_that(goto["page"].extra["profile_field"]).is_equal_to("profile")
+    goto_card = cards["com.decker.pages.goto"]
+    assert_that(goto_card.settings).is_empty()
+    assert_that(goto_card.bindings["press"].action).is_equal_to("com.decker.pages.goto")
 
 
 @pytest.mark.parametrize("name", ["caret-left.svg", "caret-right.svg"])
@@ -77,7 +92,7 @@ def test_notice_credits_font_awesome() -> None:
 
 def test_icons_resolve(manifest: PluginManifest) -> None:
     assert_that(resolve_icon(_DIR, manifest.icon)).is_not_none()
-    for spec in manifest.cards:
+    for spec in (*manifest.cards, *manifest.actions):
         assert_that(resolve_icon(_DIR, spec.icon)).is_not_none()
 
 
