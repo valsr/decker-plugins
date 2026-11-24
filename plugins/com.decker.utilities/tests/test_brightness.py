@@ -2,6 +2,7 @@
 
 import sys
 import threading
+import time
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
@@ -442,3 +443,43 @@ def test_refused_logind_write_leaves_cache_untouched_and_does_not_notify(
 
     assert_that(cache.level("backlight:bl")).is_equal_to(10)
     assert_that(changes).is_empty()
+
+
+# --- start/stop from different threads ---
+
+
+def test_a_stop_during_start_waits_for_the_thread_to_be_running(monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+
+    real_thread = threading.Thread
+    published, errors = threading.Event(), []
+
+    class SlowStart(real_thread):  # type: ignore[misc, valid-type]
+        def start(self) -> None:
+            if self.name == "brightness-poll":
+                published.set()
+                time.sleep(0.3)  # a window in which stop() could see the thread before it was started
+            super().start()
+
+    class _Empty:
+        def list_monitors(self) -> list[Monitor]:
+            return []
+
+    cache = BrightnessCache(_Empty(), interval=0.05)
+
+    def stopper() -> None:
+        assert published.wait(5)
+        try:
+            cache.stop()
+        except RuntimeError as exc:
+            errors.append(exc)
+
+    stopping = real_thread(target=stopper)
+    stopping.start()
+    monkeypatch.setattr(threading, "Thread", SlowStart)
+    cache.start()
+    monkeypatch.undo()
+    stopping.join(5)
+
+    assert_that(errors).is_empty()
+    assert_that([t for t in threading.enumerate() if t.name == "brightness-poll" and t.is_alive()]).is_empty()
