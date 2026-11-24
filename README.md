@@ -9,6 +9,13 @@ It is Decker's default repository. If you removed it: Settings, Plugins, Reposit
 `https://valsr.github.io/decker-plugins/index.json`. Only add repositories you trust: plugins run with your user's
 permissions. See Decker's `docs/plugins/repositories.md`.
 
+## Requirements and Font Awesome
+
+The plugins here use manifest format 3 and declare `"decker": ">=0.7"`, so they need Decker 0.7 or newer. The former
+Fontawesome plugin (`com.decker.fontawesome`) is retired: Font Awesome Free 7.3.1 is built into Decker 0.7 as the
+Built-In icon packs, referenced as `fab:<name>` (brands), `far:<name>` (regular) and `fas:<name>` (solid), for example
+`fas:play`. Existing `pack:com.decker.fontawesome.*` references need to be switched to those forms.
+
 ## Layout
 
 - `plugins/<plugin-id>/`: the plugin source as accepted by Decker's plugin packer, with its own `tests/`. The folder
@@ -51,7 +58,6 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 | Plugin | Linux (Arch/Plasma/Wayland) | Linux (Ubuntu/Debian/Fedora/GNOME) | Linux (other) | Windows | macOS |
 |--------|------|------|------|------|------|
 | counter (`com.decker.counter`)[^2] | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
-| fontawesome (`com.decker.fontawesome`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | pages (`com.decker.pages`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | profiles (`com.decker.profiles`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 
@@ -59,7 +65,7 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
     ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
     `ubuntu-latest`, `windows-latest`, `macos-latest` and in `fedora:latest` and `archlinux:latest` containers. On each
     it ran the tool tests (33 passed) and the five
-    plugin suites (counter 19, fontawesome 9, icon 8, pages 36, profiles 30 passed) against the pinned Decker,
+    plugin suites (counter 19, icon 8, pages 36, profiles 30 passed) against the pinned Decker,
     including Counter's font path with the bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
     cover a real Stream Deck, the real Decker UI, or a real plugin process under the Decker supervisor on any OS.
 [^2]: Since 1.1.0 Counter draws with Decker's bundled DejaVu Sans Bold through the SDK (`decker_plugin_sdk.fonts`) on
@@ -70,6 +76,6 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
     can break without a change here). It covers Arch, not the Plasma desktop or Wayland, and the maintainer has not
     yet used the plugins there, so the cell is ✅ on CI evidence alone.
 
-Pages, Profiles, Icon and Font Awesome use no OS APIs. No manifest declares `platforms` or `linux`, which means all
+Pages, Profiles and Icon use no OS APIs. No manifest declares `platforms` or `linux`, which means all
 platforms; the table above records what has been verified, not what the manifests restrict.
 

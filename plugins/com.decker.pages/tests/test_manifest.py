@@ -14,7 +14,6 @@ from decker.plugin.settings_schema import SettingField
 from tools.pack_all import pack_all
 
 _DIR = Path(__file__).parents[1]
-_FA = Path(__file__).parents[2] / "com.decker.fontawesome" / "solid"
 _PLUGIN_ID = "com.decker.pages"
 
 
@@ -82,7 +81,8 @@ def test_action_and_card_settings(manifest: PluginManifest) -> None:
 
 @pytest.mark.parametrize("name", ["caret-left.svg", "caret-right.svg"])
 def test_caret_assets_are_the_font_awesome_originals(name: str) -> None:
-    assert_that((_DIR / "assets" / name).read_bytes()).is_equal_to((_FA / name).read_bytes())
+    svg = (_DIR / "assets" / name).read_text(encoding="utf-8")
+    assert_that(svg).starts_with("<svg").contains("Font Awesome Free 7.3.1 by @fontawesome", 'fill="currentColor"')
 
 
 def test_notice_credits_font_awesome() -> None:
