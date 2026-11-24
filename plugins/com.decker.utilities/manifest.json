@@ -351,6 +351,32 @@
             }
           }
         }
+      },
+      {
+        "id": "com.decker.utilities.sleep",
+        "name": "Sleep",
+        "tooltip": "Press to sleep now (or cancel a countdown), double press to sleep in 1 minute, long press to sleep in 10 minutes",
+        "icon": "fas:moon",
+        "appearance": {
+          "background": "#000000"
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.sleep-press"
+          },
+          "double_press": {
+            "action": "com.decker.utilities.sleep-after",
+            "args": {
+              "minutes": 1
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.sleep-after",
+            "args": {
+              "minutes": 10
+            }
+          }
+        }
       }
     ],
     "actions": [
@@ -570,6 +596,47 @@
             "max": 100
           }
         ]
+      },
+      {
+        "id": "com.decker.utilities.sleep",
+        "name": "Sleep",
+        "tooltip": "Put the computer to sleep",
+        "icon": "fas:moon",
+        "scope": "global",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.lock",
+        "name": "Lock",
+        "tooltip": "Lock the screen",
+        "icon": "fas:lock",
+        "scope": "global",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.sleep-press",
+        "name": "Sleep or cancel",
+        "tooltip": "Cancels this Sleep card's countdown, or puts the computer to sleep when none is running",
+        "icon": "fas:moon",
+        "scope": "plugin",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.sleep-after",
+        "name": "Sleep after",
+        "tooltip": "Starts (or restarts) this Sleep card's countdown to sleep",
+        "icon": "fas:moon",
+        "scope": "plugin",
+        "settings": [
+          {
+            "key": "minutes",
+            "type": "int",
+            "label": "Minutes",
+            "default": 1,
+            "min": 1,
+            "max": 1440
+          }
+        ]
       }
     ],
     "icon_packs": [
@@ -595,6 +662,10 @@
       {
         "pattern": "deck_brightness_level_{device}",
         "description": "Brightness of the deck with this device id, 0-100"
+      },
+      {
+        "name": "sleep_in",
+        "description": "Time until the soonest running Sleep countdown, m:ss or h:mm:ss (empty if none)"
       }
     ]
   }
