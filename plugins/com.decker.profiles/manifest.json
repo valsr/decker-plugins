@@ -1,14 +1,14 @@
 {
-  "format": 2,
+  "format": 3,
   "id": "com.decker.profiles",
   "name": "Profiles",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "author": "Decker",
   "description": "Keys for moving between a device's profiles.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/profiles",
   "category": "Utilities",
-  "decker": ">=0.6",
+  "decker": ">=0.7",
   "runtime": {
     "type": "python",
     "entry": "plugin.py"
@@ -20,25 +20,82 @@
         "name": "Next profile",
         "tooltip": "Go to the next profile",
         "icon": "icons/profiles",
-        "gestures": [
-          "press"
-        ],
         "appearance": {
           "background": "#000000"
         },
         "settings": [
-          {
-            "key": "wrap",
-            "type": "bool",
-            "label": "Wrap around",
-            "default": false
-          },
           {
             "key": "color",
             "type": "color",
             "label": "Icon colour",
             "default": "#ffffff",
             "alpha": true
+          }
+        ],
+        "bindings": {
+          "press": {
+            "action": "com.decker.profiles.next",
+            "args": {
+              "wrap": false
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.profiles.previous",
+        "name": "Previous profile",
+        "tooltip": "Go to the previous profile",
+        "icon": "icons/profiles",
+        "appearance": {
+          "background": "#000000"
+        },
+        "settings": [
+          {
+            "key": "color",
+            "type": "color",
+            "label": "Icon colour",
+            "default": "#ffffff",
+            "alpha": true
+          }
+        ],
+        "bindings": {
+          "press": {
+            "action": "com.decker.profiles.previous",
+            "args": {
+              "wrap": false
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.profiles.goto",
+        "name": "Go to profile",
+        "tooltip": "Go to a chosen profile; shows its icon",
+        "icon": "icons/profiles",
+        "appearance": {
+          "background": "#000000"
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.profiles.goto",
+            "args": {}
+          }
+        }
+      }
+    ],
+    "actions": [
+      {
+        "id": "com.decker.profiles.next",
+        "name": "Next profile",
+        "tooltip": "Go to the next profile",
+        "icon": "icons/profiles",
+        "scope": "global",
+        "settings": [
+          {
+            "key": "wrap",
+            "type": "bool",
+            "label": "Wrap around",
+            "default": false
           }
         ]
       },
@@ -47,25 +104,13 @@
         "name": "Previous profile",
         "tooltip": "Go to the previous profile",
         "icon": "icons/profiles",
-        "gestures": [
-          "press"
-        ],
-        "appearance": {
-          "background": "#000000"
-        },
+        "scope": "global",
         "settings": [
           {
             "key": "wrap",
             "type": "bool",
             "label": "Wrap around",
             "default": false
-          },
-          {
-            "key": "color",
-            "type": "color",
-            "label": "Icon colour",
-            "default": "#ffffff",
-            "alpha": true
           }
         ]
       },
@@ -74,12 +119,7 @@
         "name": "Go to profile",
         "tooltip": "Go to a chosen profile; shows its icon",
         "icon": "icons/profiles",
-        "gestures": [
-          "press"
-        ],
-        "appearance": {
-          "background": "#000000"
-        },
+        "scope": "global",
         "settings": [
           {
             "key": "profile",
