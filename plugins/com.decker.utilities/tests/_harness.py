@@ -17,6 +17,7 @@ from decker_plugin_sdk._actions import registered_actions
 PLUGIN_DIR = Path(__file__).parents[1]
 PLUGIN_ID = "com.decker.utilities"
 CONTEXT = "c1"
+DEVICE = "dev1"  # the device of the appeared card and the default device of run_action
 PROTOCOL = 5
 _KEY = {"index": 0, "column": 0, "row": 0}
 
@@ -38,7 +39,7 @@ class Harness:
     def __init__(self, plugin: ModuleType, card_id: str, class_name: str) -> None:
         self.card_id = card_id
         self.seen: list[str] = []  # event names of every message received so far, in order
-        self.sent: list[dict] = []  # messages the plugin sent while the last run_action ran
+        self.sent: list[dict] = []  # messages that arrived between the last run_action's request and its result
         self._backlog: deque[dict] = deque()  # received during run_action, not yet consumed by recv
         self._settings: dict[str, Any] = {}
         self._requests = 0
@@ -101,7 +102,7 @@ class Harness:
             "will_appear",
             {
                 "card": self.card_id,
-                "device": "d",
+                "device": DEVICE,
                 "key": _KEY,
                 "size": list(size),
                 "settings": settings,
@@ -116,12 +117,15 @@ class Harness:
         self._settings = settings
         self.send_event("settings_changed", {"settings": settings, "bindings": bindings or {}}, CONTEXT)
 
-    def run_action(self, action_id: str, args: dict[str, Any], with_card: bool = True, device: str = "dev1") -> dict:
+    def run_action(self, action_id: str, args: dict[str, Any], with_card: bool = True, device: str = DEVICE) -> dict:
         """Run an action (with this key as the card unless `with_card` is false); return its action_result payload.
 
-        Everything the plugin sent before the result is kept in `sent` (see `sent_payloads`) and is still
-        delivered to later `recv`/`recv_until` calls.
+        The call carries `device` either way, so a context-less call can be device-scoped. Messages the plugin
+        sent earlier are first read into the backlog (a ping/pong barrier), so `sent` holds what arrived between
+        this request and its result; events of the card's own key still in flight may be late and land in it.
+        Everything in `sent` is still delivered to later `recv`/`recv_until` calls.
         """
+        self._settle()
         self._requests += 1
         card = {
             "context": CONTEXT,
@@ -139,6 +143,7 @@ class Harness:
                 "action": action_id,
                 "request": f"r{self._requests}",
                 "args": args,
+                "device": device,
                 "input": "press" if with_card else "plugin",
                 "called_at": "2026-11-21T10:00:00.123+00:00",
                 "card": card if with_card else None,
@@ -156,6 +161,15 @@ class Harness:
             self.sent.append(message)
             self._backlog.append(message)
 
+    def _settle(self) -> None:
+        """Move everything the plugin has already sent into the backlog, up to the answer to a ping."""
+        self.send_event("ping")
+        while True:
+            message = self._read()
+            if message["event"] == "pong":
+                return
+            self._backlog.append(message)
+
     def sent_payloads(self, event: str) -> list[dict]:
         """Payloads (minus the request id) of `event` messages sent before the last action_result."""
         return [{k: v for k, v in m["payload"].items() if k != "request"} for m in self.sent if m["event"] == event]
@@ -163,5 +177,6 @@ class Harness:
     def close(self) -> None:
         self.send_event("shutdown")
         self._thread.join(5)
+        assert not self._thread.is_alive(), "the plugin thread did not stop after shutdown"
         for stream in (self._to_plugin, self._plugin_in, self._plugin_out, self._from_plugin):
             stream.close()

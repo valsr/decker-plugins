@@ -2,9 +2,11 @@
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from assertpy import assert_that
+from decker_plugin_sdk import ActionCallContext, CardContext, DeckerPlugin, _actions, action
 
 sys.path.insert(0, str(Path(__file__).parent))
 from _harness import Harness, load_plugin  # noqa: E402
@@ -77,3 +79,71 @@ def test_send_event_without_a_context_reaches_the_plugin(harness):
     harness.send_event("ping")
 
     assert_that(harness.recv_until("pong")["event"]).is_equal_to("pong")
+
+
+class _ProbeCard(DeckerPlugin):
+    """Records the device the server says it is on."""
+
+    devices: list[str] = []
+
+    def on_will_appear(self, ctx: CardContext) -> None:
+        self.devices.append(ctx.device)
+        ctx.set_title("seen")
+
+
+@pytest.fixture(name="probe")
+def probe_fixture(monkeypatch):
+    """A harness whose plugin has one extra action that reports the device of its call, card and context."""
+    monkeypatch.setattr(_actions, "_ACTIONS", dict(_actions._ACTIONS))
+    calls: list[tuple[str | None, str | None]] = []
+
+    @action("com.decker.utilities.zz-probe")
+    def probe(ctx: ActionCallContext) -> None:
+        calls.append((ctx.device_id, ctx.card.device if ctx.card else None))
+        ctx.switch_page("next")
+
+    _ProbeCard.devices = []
+    harness = Harness(SimpleNamespace(Probe=_ProbeCard), "com.decker.utilities.zz-probe", "Probe")
+    harness.calls = calls
+    yield harness
+    harness.close()
+
+
+_PROBE = "com.decker.utilities.zz-probe"
+
+
+def test_appear_and_run_action_default_to_the_same_device(probe):
+    probe.appear({})
+    probe.recv_until("set_title")
+
+    probe.run_action(_PROBE, {})
+
+    assert_that(probe.calls).is_equal_to([(_ProbeCard.devices[0], _ProbeCard.devices[0])])
+
+
+def test_a_context_less_run_action_carries_the_chosen_device(probe):
+    probe.run_action(_PROBE, {}, with_card=False, device="other")
+
+    assert_that(probe.calls).is_equal_to([("other", None)])
+    assert_that(probe.sent_payloads("switch_page")).is_equal_to([{"device": "other", "to": "next", "wrap": False}])
+
+
+def test_sent_payloads_only_reflects_the_current_action(probe):
+    probe.run_action(_PROBE, {}, with_card=False, device="first")
+
+    probe.run_action(_PROBE, {}, with_card=False, device="second")
+
+    assert_that(probe.sent_payloads("switch_page")).is_length(1)
+    assert_that(probe.sent_payloads("switch_page")[0]["device"]).is_equal_to("second")
+
+
+def test_close_fails_when_the_plugin_thread_does_not_stop(monkeypatch):
+    harness = Harness(load_plugin(), _CARD, "CounterCard")
+    monkeypatch.setattr(harness, "send_event", lambda *args, **kwargs: None)  # the shutdown never arrives
+    monkeypatch.setattr(harness._thread, "join", lambda timeout=None: None)
+
+    with pytest.raises(AssertionError, match="did not stop"):
+        harness.close()
+
+    monkeypatch.undo()
+    harness.close()

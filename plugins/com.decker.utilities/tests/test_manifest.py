@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from assertpy import assert_that
-from decker.plugin.icons import resolve_icon
+from decker.plugin.icons import read_icon
 from decker.plugin.manifest import PluginManifest
 
 _DIR = Path(__file__).parents[1]
@@ -48,4 +48,4 @@ def test_every_icon_path_exists():
     icons = {_MANIFEST.icon, *(c.icon for c in _MANIFEST.cards), *(a.icon for a in _MANIFEST.actions)}
 
     for icon in icons - {None}:
-        assert_that(resolve_icon(_DIR, icon)).described_as(icon).is_not_none()
+        assert_that(read_icon(_DIR, icon)).described_as(icon).is_not_none()
