@@ -147,3 +147,61 @@ def test_close_fails_when_the_plugin_thread_does_not_stop(monkeypatch):
 
     monkeypatch.undo()
     harness.close()
+
+
+# --- the deck brightness side of the server ---
+
+
+@pytest.fixture(name="deck")
+def deck_fixture():
+    """A harness whose plugin has one extra action that reads and sets the deck brightness."""
+    from decker_plugin_sdk import get_deck_brightness, set_deck_brightness
+
+    saved = dict(_actions._ACTIONS)
+
+    @action("com.decker.utilities.zz-deck")
+    def deck_probe(ctx: ActionCallContext) -> int:
+        level = get_deck_brightness(ctx.args.get("device"))
+        set_deck_brightness(level + 1, ctx.args.get("device"))
+        return level
+
+    harness = Harness(SimpleNamespace(Probe=_ProbeCard), "com.decker.utilities.zz-probe", "Probe")
+    yield harness
+    harness.close()
+    _actions._ACTIONS.clear()
+    _actions._ACTIONS.update(saved)
+
+
+def test_the_harness_answers_get_deck_brightness_from_deck_levels(deck):
+    deck.deck_levels["dev9"] = 33
+
+    result = deck.run_action("com.decker.utilities.zz-deck", {"device": "dev9"}, with_card=False)
+
+    assert_that(result["value"]).is_equal_to(33)
+    assert_that(deck.deck_gets).is_equal_to(["dev9"])
+
+
+def test_the_harness_records_set_deck_brightness_payloads(deck):
+    deck.run_action("com.decker.utilities.zz-deck", {}, with_card=False)
+
+    assert_that(deck.deck_sets).is_equal_to([{"device": "dev1", "percent": 51}])
+
+
+def test_an_unknown_deck_gets_an_error_reply(deck):
+    result = deck.run_action("com.decker.utilities.zz-deck", {"device": "nope"}, with_card=False)
+
+    assert_that(result["ok"]).is_false()
+    assert_that(result["error"]).contains("unknown device")
+    assert_that(deck.deck_sets).is_empty()
+
+
+def test_deck_events_helpers_reach_the_plugin(deck):
+    from decker_plugin_sdk import connected_devices
+
+    deck.connect("dev7")
+    deck.run_action("com.decker.utilities.zz-deck", {}, with_card=False)  # barrier: the reader has seen the event
+    assert_that(connected_devices()).contains("dev7")
+
+    deck.disconnect("dev7")
+    deck.run_action("com.decker.utilities.zz-deck", {}, with_card=False)
+    assert_that(connected_devices()).does_not_contain("dev7")
