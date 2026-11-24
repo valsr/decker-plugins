@@ -30,6 +30,7 @@ from decker_plugin_sdk import (
     variable,
 )
 from power import PowerError
+from ticker import Ticker
 from timers import Countdown, fmt_ms
 
 _log = logging.getLogger(__name__)
@@ -41,7 +42,6 @@ _RUNNING_TINT = "#f5b041"
 _VARIABLE = "sleep_in"
 _MIN_MINUTES, _MAX_MINUTES = 1, 1440
 _LATE_SECONDS = 5.0  # a countdown found this far past its deadline is dropped instead of fired
-_STOP_JOIN_SECONDS = 5.0
 
 Outcome = Literal["cancelled", "pending", "suspended"]
 
@@ -52,12 +52,6 @@ class _Face:
 
     ctx: CardContext
     lock: threading.Lock = field(default_factory=threading.Lock)
-
-
-@dataclass
-class _Ticker:
-    thread: threading.Thread
-    stop: threading.Event
 
 
 class Sleeper:
@@ -73,13 +67,11 @@ class Sleeper:
         self._clock = clock
         self._wall_clock = wall_clock or _sleep_inclusive_clock()
         self._suspender = suspender or (lambda: power.suspend())
-        self._interval = interval
         self._lock = threading.Lock()
         self._countdowns: dict[str, Countdown] = {}
         self._firing: set[str] = set()
         self._faces: dict[str, _Face] = {}
-        self._lifecycle = threading.Lock()  # start and stop are check-then-act on _ticker
-        self._ticker: _Ticker | None = None
+        self._ticker = Ticker(interval, self.tick, "sleep-ticker")
 
     # --- registry
 
@@ -218,33 +210,13 @@ class Sleeper:
                 self._firing.discard(context)
 
     def start_ticker(self) -> None:
-        with self._lifecycle:
-            if self._ticker is not None:
-                return
-            stop = threading.Event()
-            thread = threading.Thread(target=self._run, args=(stop,), name="sleep-ticker", daemon=True)
-            thread.start()
-            self._ticker = _Ticker(thread, stop)  # published only once it runs, so stop() never joins an unstarted one
+        self._ticker.start()
 
     def stop(self) -> None:
-        with self._lifecycle:
-            ticker, self._ticker = self._ticker, None
-            if ticker is None:
-                return
-            ticker.stop.set()
-            if ticker.thread is not threading.current_thread():
-                ticker.thread.join(_STOP_JOIN_SECONDS)
+        self._ticker.stop()
 
     def ticker_alive(self) -> bool:
-        with self._lifecycle:
-            return self._ticker is not None and self._ticker.thread.is_alive()
-
-    def _run(self, stop: threading.Event) -> None:
-        while not stop.wait(self._interval):
-            try:
-                self.tick()
-            except Exception:
-                _log.exception("sleep ticker failed")
+        return self._ticker.alive()
 
 
 def _sleep_inclusive_clock() -> Callable[[], float]:
