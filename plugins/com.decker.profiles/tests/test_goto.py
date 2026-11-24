@@ -9,7 +9,7 @@ import pytest
 from assertpy import assert_that
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _profiles_harness import Harness, goto_bindings, load_plugin  # noqa: E402
+from _profiles_harness import Harness, goto_bindings, load_plugin, server_goto_bindings  # noqa: E402
 
 _ACTION = "com.decker.profiles.goto"
 _PROFILE = {"profile_id": 2, "name": "Work", "index": 2, "icon": "pack:a/b.svg"}
@@ -134,3 +134,19 @@ def test_names_with_braces_or_newlines_are_passed_through_as_text(key: Harness) 
     _appear(key, {**_PROFILE, "name": "A {b}\nC"})
 
     assert_that(key.recv_until("set_title")["payload"]).is_equal_to({"title": "A {b}\nC"})
+
+
+def test_goto_card_shows_the_profile_from_the_bindings_the_server_really_sends(key: Harness) -> None:
+    key.appear({}, server_goto_bindings("2"))
+
+    assert_that(key.recv_until("set_image")["payload"]).is_equal_to({"icon": "pack:a/b.svg"})
+    assert_that(key.recv_until("set_title")["payload"]).is_equal_to({"title": "Work"})
+
+
+def test_goto_card_follows_a_rename_in_the_server_resolved_bindings(key: Harness) -> None:
+    key.appear({}, server_goto_bindings("2"))
+    key.recv_until("set_title")
+
+    key.change({}, server_goto_bindings("2", profiles=((0, "Default", ""), (2, "Renamed", "pack:a/b.svg"))))
+
+    assert_that(key.recv_until("set_title")["payload"]).is_equal_to({"title": "Renamed"})
