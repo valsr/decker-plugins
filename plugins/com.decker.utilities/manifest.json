@@ -1,0 +1,127 @@
+{
+  "format": 3,
+  "id": "com.decker.utilities",
+  "name": "Utilities",
+  "version": "1.0.0",
+  "author": "Decker",
+  "description": "Brightness, sleep, timer, stopwatch, counter, page and profile keys.",
+  "homepage": "https://github.com/valsr/decker-plugins",
+  "icon": "icons/utilities",
+  "category": "Utilities",
+  "decker": ">=0.7.2",
+  "platforms": [
+    "linux",
+    "windows",
+    "macos"
+  ],
+  "runtime": {
+    "type": "python",
+    "entry": "plugin.py",
+    "requirements": [
+      "pillow>=12",
+      "screen-brightness-control; sys_platform != \"darwin\"",
+      "jeepney; sys_platform == \"linux\""
+    ]
+  },
+  "contributes": {
+    "cards": [
+      {
+        "id": "com.decker.utilities.counter",
+        "name": "Counter",
+        "tooltip": "Press to count up, double press to count down, long press to reset",
+        "icon": "icons/counter",
+        "appearance": {
+          "background": "#1f618d"
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.counter-increment",
+            "args": {
+              "step": 1
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.counter-decrement",
+            "args": {
+              "step": 1
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.counter-reset"
+          }
+        },
+        "settings": [
+          {
+            "section": "Counting"
+          },
+          {
+            "key": "max",
+            "type": "int",
+            "label": "Max count",
+            "default": 0,
+            "min": 0,
+            "max": 99999,
+            "special_value": "∞ (no limit)"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "id": "com.decker.utilities.counter-increment",
+        "name": "Count up",
+        "tooltip": "Adds the step to the Counter card's count",
+        "icon": "icons/counter",
+        "scope": "plugin",
+        "settings": [
+          {
+            "key": "step",
+            "type": "int",
+            "label": "Step",
+            "default": 1,
+            "min": 1,
+            "max": 9999
+          }
+        ]
+      },
+      {
+        "id": "com.decker.utilities.counter-decrement",
+        "name": "Count down",
+        "tooltip": "Subtracts the step from the Counter card's count",
+        "icon": "icons/counter",
+        "scope": "plugin",
+        "settings": [
+          {
+            "key": "step",
+            "type": "int",
+            "label": "Step",
+            "default": 1,
+            "min": 1,
+            "max": 9999
+          }
+        ]
+      },
+      {
+        "id": "com.decker.utilities.counter-reset",
+        "name": "Reset count",
+        "tooltip": "Sets the Counter card's count back to 0",
+        "icon": "icons/counter",
+        "scope": "plugin",
+        "settings": []
+      }
+    ],
+    "icon_packs": [
+      {
+        "id": "com.decker.utilities.counter-icons",
+        "name": "Counter icons",
+        "path": "iconpack"
+      }
+    ],
+    "variables": [
+      {
+        "name": "brightness_level",
+        "description": "First monitor's brightness, 0-100 (empty if no monitor)"
+      }
+    ]
+  }
+}
