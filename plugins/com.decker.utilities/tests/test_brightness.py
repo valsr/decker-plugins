@@ -3,7 +3,7 @@
 import sys
 import threading
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
@@ -373,3 +373,72 @@ def test_cache_thread_polls_and_stop_joins() -> None:
     assert_that(cache.level("fake:1")).is_equal_to(77)
     assert_that([t for t in threading.enumerate() if t.name == "brightness-poll"]).is_empty()
     cache.stop()
+
+
+# --- default D-Bus sender: error replies must not read as success
+
+
+class _DBusErrorResponse(Exception):
+    pass
+
+
+def _fake_jeepney(monkeypatch: pytest.MonkeyPatch, reply: str) -> list[str]:
+    """Install a jeepney whose connection answers with ``reply``; unwrap_msg raises on an error reply, like jeepney."""
+    events: list[str] = []
+
+    def unwrap_msg(message: str) -> str:
+        if message == "error-reply":
+            raise _DBusErrorResponse("org.freedesktop.DBus.Error.AccessDenied")
+        return message
+
+    class Connection:
+        def send_and_get_reply(self, message: Any, timeout: float | None = None) -> str:
+            events.append("sent")
+            return reply
+
+        def close(self) -> None:
+            events.append("closed")
+
+    jeepney = ModuleType("jeepney")
+    jeepney.DBusAddress = lambda *a, **k: ("addr", a, k)  # type: ignore[attr-defined]
+    jeepney.new_method_call = lambda *a, **k: ("call", a)  # type: ignore[attr-defined]
+    jeepney.unwrap_msg = unwrap_msg  # type: ignore[attr-defined]
+    io = ModuleType("jeepney.io")
+    blocking = ModuleType("jeepney.io.blocking")
+    blocking.open_dbus_connection = lambda bus="SESSION": Connection()  # type: ignore[attr-defined]
+    for name, module in {"jeepney": jeepney, "jeepney.io": io, "jeepney.io.blocking": blocking}.items():
+        monkeypatch.setitem(sys.modules, name, module)
+    return events
+
+
+def test_default_sender_error_reply_is_a_brightness_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _sysfs(tmp_path, "bl", 10, 100)
+    events = _fake_jeepney(monkeypatch, "error-reply")
+
+    with pytest.raises(BrightnessError, match="backlight:bl"):
+        LogindBacklight(tmp_path).set("backlight:bl", 50)
+    assert_that(events).is_equal_to(["sent", "closed"])
+
+
+def test_default_sender_ok_reply_succeeds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _sysfs(tmp_path, "bl", 10, 100)
+    _fake_jeepney(monkeypatch, "ok-reply")
+
+    LogindBacklight(tmp_path).set("backlight:bl", 50)
+
+
+def test_refused_logind_write_leaves_cache_untouched_and_does_not_notify(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _sysfs(tmp_path, "bl", 10, 100)
+    _fake_jeepney(monkeypatch, "error-reply")
+    changes: list[int] = []
+    cache = BrightnessCache(LogindBacklight(tmp_path), on_change=lambda: changes.append(1))
+    cache.poll_once()
+    changes.clear()
+
+    with pytest.raises(BrightnessError):
+        cache.change("backlight:bl", "set", 80)
+
+    assert_that(cache.level("backlight:bl")).is_equal_to(10)
+    assert_that(changes).is_empty()

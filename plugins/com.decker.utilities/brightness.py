@@ -43,7 +43,7 @@ def _clamp(value: int) -> int:
 
 
 def _send_logind(subsystem: str, name: str, raw: int) -> None:
-    from jeepney import DBusAddress, new_method_call
+    from jeepney import DBusAddress, new_method_call, unwrap_msg
     from jeepney.io.blocking import open_dbus_connection
 
     address = DBusAddress(
@@ -54,7 +54,8 @@ def _send_logind(subsystem: str, name: str, raw: int) -> None:
     message = new_method_call(address, "SetBrightness", "ssu", (subsystem, name, raw))
     connection = open_dbus_connection(bus="SYSTEM")
     try:
-        connection.send_and_get_reply(message, timeout=5)
+        # send_and_get_reply returns error replies instead of raising; unwrap_msg raises DBusErrorResponse on them
+        unwrap_msg(connection.send_and_get_reply(message, timeout=5))
     finally:
         connection.close()
 
