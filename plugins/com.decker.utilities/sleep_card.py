@@ -31,7 +31,7 @@ from decker_plugin_sdk import (
 )
 from power import PowerError
 from ticker import Ticker
-from timers import Countdown, fmt_ms
+from timers import Countdown, fmt_ms, sleep_inclusive_clock
 
 _log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class Sleeper:
         wall_clock: Callable[[], float] | None = None,
     ) -> None:
         self._clock = clock
-        self._wall_clock = wall_clock or _sleep_inclusive_clock()
+        self._wall_clock = wall_clock or sleep_inclusive_clock
         self._suspender = suspender or (lambda: power.suspend())
         self._lock = threading.Lock()
         self._countdowns: dict[str, Countdown] = {}
@@ -217,13 +217,6 @@ class Sleeper:
 
     def ticker_alive(self) -> bool:
         return self._ticker.alive()
-
-
-def _sleep_inclusive_clock() -> Callable[[], float]:
-    """A clock that keeps counting while the machine is suspended (CLOCK_BOOTTIME on Linux, wall time elsewhere)."""
-    if hasattr(time, "CLOCK_BOOTTIME"):
-        return lambda: time.clock_gettime(time.CLOCK_BOOTTIME)
-    return time.time
 
 
 def _signal() -> None:

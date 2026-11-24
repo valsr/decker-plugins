@@ -21,7 +21,7 @@ import timer_card  # noqa: E402
 from _harness import CONTEXT, PLUGIN_DIR, Harness, load_plugin  # noqa: E402
 from drawing import draw_progress, draw_time, progress_color  # noqa: E402
 from timer_card import Timers  # noqa: E402
-from timers import Timer  # noqa: E402
+from timers import Timer, sleep_inclusive_clock  # noqa: E402
 
 _CARD = "com.decker.utilities.timer"
 _TOGGLE = "com.decker.utilities.timer-toggle"
@@ -164,6 +164,67 @@ def test_a_zero_duration_timer_has_nothing_left(clock: FakeClock) -> None:
 
     assert_that(timer.remaining()).is_equal_to(0)
     assert_that(timer.fraction_left()).is_equal_to(0.0)
+
+
+# --- real time across a system sleep (the one clock keeps counting while the machine is suspended) ---
+
+
+def test_the_sleep_inclusive_clock_is_a_non_decreasing_float() -> None:
+    first = sleep_inclusive_clock()
+    second = sleep_inclusive_clock()
+
+    assert_that(first).is_instance_of(float)
+    assert_that(second).is_greater_than_or_equal_to(first)
+
+
+def test_a_timer_ending_during_a_system_sleep_finishes_quietly_at_zero(clock: FakeClock) -> None:
+    timer = Timer(600, clock)
+    timer.toggle()
+    clock.now += 60
+    clock.now += 3600  # the machine slept for an hour
+
+    assert_that(timer.remaining()).is_equal_to(0)
+    assert_that(timer.tick()).is_false()
+    assert_that(timer.state).is_equal_to("finished")
+
+
+def test_a_timer_with_time_left_after_a_short_sleep_shows_the_real_remaining_time(clock: FakeClock) -> None:
+    timer = Timer(600, clock)
+    timer.toggle()
+    clock.now += 100
+    clock.now += 200  # slept for 200 s
+
+    assert_that(timer.remaining()).is_equal_to(300)
+    assert_that(timer.tick()).is_false()
+    assert_that(timer.state).is_equal_to("running")
+
+
+def test_pause_and_resume_across_a_system_sleep_count_only_the_running_time(clock: FakeClock) -> None:
+    timer = Timer(600, clock)
+    timer.toggle()
+    clock.now += 100
+    timer.toggle()
+    clock.now += 5000  # paused, and the machine slept
+    timer.toggle()
+    clock.now += 50
+    clock.now += 100  # slept again while running
+
+    assert_that(timer.remaining()).is_equal_to(350)
+
+
+def test_the_registry_finishes_a_timer_that_ended_in_a_sleep_with_zero_and_no_alert(
+    timers: Timers, clock: FakeClock, texts: list[str]
+) -> None:
+    ctx = _track(timers, minutes=1)
+    timers.toggle("k1", 60)
+
+    clock.now += 7200
+    timers.tick()
+
+    assert_that(timers.state("k1")).is_equal_to("finished")
+    assert_that(texts[-1]).is_equal_to("0:00")
+    assert_that(timers.pending_alerts()).is_equal_to(0)
+    assert_that(ctx.alert_count).is_equal_to(0)
 
 
 # --- progress_color ---

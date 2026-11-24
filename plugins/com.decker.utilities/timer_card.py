@@ -3,15 +3,14 @@
 Timers live in one registry keyed by the card's context id, so they keep running while the key's page is switched
 away; ``will_appear`` repaints the key with what is left. One daemon ticker thread (started by the first press, at 4 Hz)
 repaints the running keys only; idle, paused and finished keys are painted when their state changes. A timer is never
-rung late (see ``timers.Timer``) and is lost with the plugin process. When one finishes the key shows ``0:00`` and
-flashes an alert three times, half a second apart, from a short-lived thread that a press, a reset or a duration
-change cancels.
+rung late, also not after a system sleep (see ``timers.Timer``), and is lost with the plugin process. When one finishes
+the key shows ``0:00`` and flashes an alert three times, half a second apart, from a short-lived thread that a press,
+a reset or a duration change cancels.
 """
 
 import logging
 import math
 import threading
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -19,7 +18,7 @@ from typing import Any
 from decker_plugin_sdk import ActionCallContext, ActionError, CardContext, DeckerPlugin, action, card
 from drawing import draw_progress, draw_time, progress_color
 from ticker import Ticker
-from timers import Timer, TimerState, fmt_ms
+from timers import Timer, TimerState, fmt_ms, sleep_inclusive_clock
 
 _log = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ class Timers:
 
     def __init__(
         self,
-        clock: Callable[[], float] = time.monotonic,
+        clock: Callable[[], float] = sleep_inclusive_clock,
         interval: float = _INTERVAL,
         alert_delay: float = _ALERT_DELAY,
     ) -> None:
