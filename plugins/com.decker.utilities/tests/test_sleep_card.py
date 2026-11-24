@@ -28,11 +28,17 @@ _WAIT = 5
 
 
 class FakeClock:
+    """A monotonic clock (``now``) plus a sleep-inclusive one (``wall``): ``slept`` only moves the latter."""
+
     def __init__(self) -> None:
         self.now = 1000.0
+        self.slept = 0.0
 
     def __call__(self) -> float:
         return self.now
+
+    def wall(self) -> float:
+        return self.now + self.slept
 
 
 class FakeCtx:
@@ -84,12 +90,21 @@ def suspends_fixture() -> Suspends:
 
 @pytest.fixture(name="sleeper")
 def sleeper_fixture(clock: FakeClock, suspends: Suspends) -> Iterator[Sleeper]:
-    sleeper = Sleeper(clock=clock, suspender=suspends, interval=3600)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspends, interval=3600)
     yield sleeper
     sleeper.stop()
 
 
 # --- Countdown and fmt_ms ---
+
+
+def test_countdown_lateness_is_measured_on_the_wall_clock(clock: FakeClock) -> None:
+    countdown = Countdown(60, clock, clock.wall)
+
+    clock.now += 60
+    assert_that(countdown.overdue()).is_equal_to(0)
+    clock.slept += 500  # the machine slept: only the wall clock saw it
+    assert_that(countdown.overdue()).is_equal_to(500)
 
 
 def test_countdown_counts_down_on_its_clock_and_expires_at_zero(clock: FakeClock) -> None:
@@ -146,7 +161,7 @@ def test_after_restarts_a_running_countdown_with_the_new_length(sleeper: Sleeper
 
 
 def test_a_failed_suspend_on_press_raises_the_power_error(clock: FakeClock) -> None:
-    sleeper = Sleeper(clock=clock, suspender=Suspends(PowerError("no logind")), interval=3600)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=Suspends(PowerError("no logind")), interval=3600)
 
     with pytest.raises(PowerError, match="no logind"):
         sleeper.press("k1")
@@ -210,7 +225,7 @@ def test_the_registry_lock_is_not_held_while_suspending(clock: FakeClock) -> Non
         held.append(sleeper.lock_held())
         sleeper.start("other", 5)  # would deadlock on a held lock
 
-    sleeper = Sleeper(clock=clock, suspender=suspender, interval=3600)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspender, interval=3600)
     sleeper.start("k1", 1)
     clock.now += 1
     sleeper.tick()
@@ -232,7 +247,7 @@ def test_a_countdown_found_long_overdue_is_dropped_never_fired_late(
 
 def test_a_failed_suspend_alerts_the_live_key_and_clears_state(clock: FakeClock) -> None:
     suspends = Suspends(PowerError("refused"))
-    sleeper = Sleeper(clock=clock, suspender=suspends, interval=3600)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspends, interval=3600)
     ctx = FakeCtx()
     sleeper.track(ctx)  # type: ignore[arg-type]
     sleeper.start("k1", 1)
@@ -247,13 +262,81 @@ def test_a_failed_suspend_alerts_the_live_key_and_clears_state(clock: FakeClock)
 def test_a_failed_suspend_of_a_key_that_is_gone_is_only_logged(
     clock: FakeClock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    sleeper = Sleeper(clock=clock, suspender=Suspends(PowerError("refused")), interval=3600)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=Suspends(PowerError("refused")), interval=3600)
     sleeper.start("k1", 1)
     clock.now += 1
 
     sleeper.tick()
 
     assert_that(caplog.text).contains("refused")
+
+
+# --- system sleep, one suspend per tick ---
+
+
+def test_a_countdown_whose_machine_slept_through_its_deadline_is_dropped_not_fired(
+    sleeper: Sleeper, clock: FakeClock, suspends: Suspends
+) -> None:
+    sleeper.start("k1", 60)
+    clock.slept += 8 * 3600  # suspended overnight: the monotonic clock did not move
+    clock.now += 60
+
+    sleeper.tick()
+
+    assert_that(suspends.count).is_equal_to(0)
+    assert_that(sleeper.running("k1")).is_false()
+
+
+def test_a_countdown_still_running_after_a_system_sleep_is_dropped_at_the_next_tick(
+    sleeper: Sleeper, clock: FakeClock, suspends: Suspends
+) -> None:
+    sleeper.start("a", 60)
+    sleeper.start("b", 600)
+    clock.now += 60
+    sleeper.tick()  # a fires, the machine sleeps
+    clock.slept += 8 * 3600
+    clock.now += 1
+
+    sleeper.tick()
+
+    assert_that(suspends.count).is_equal_to(1)
+    assert_that(sleeper.running("b")).is_false()
+    clock.now += 600
+    sleeper.tick()
+    assert_that(suspends.count).is_equal_to(1)
+
+
+def test_two_countdowns_due_in_one_tick_suspend_once(sleeper: Sleeper, clock: FakeClock, suspends: Suspends) -> None:
+    sleeper.start("a", 60)
+    sleeper.start("b", 60)
+    clock.now += 60
+
+    sleeper.tick()
+    sleeper.tick()
+
+    assert_that(suspends.count).is_equal_to(1)
+    assert_that(sleeper.running("a") or sleeper.running("b")).is_false()
+
+
+# --- cancel all ---
+
+
+def test_cancel_all_stops_every_countdown_and_repaints_the_live_keys_idle(sleeper: Sleeper, suspends: Suspends) -> None:
+    ctx = FakeCtx("a")
+    sleeper.track(ctx)  # type: ignore[arg-type]
+    sleeper.start("a", 60)
+    sleeper.start("gone", 600)
+
+    assert_that(sleeper.cancel_all()).is_equal_to(2)
+
+    assert_that(sleeper.soonest_text()).is_equal_to("")
+    assert_that(ctx.titles[-1]).is_equal_to("")
+    assert_that(ctx.icons[-1]).is_equal_to(("fas:moon", "#ffffff"))
+    assert_that(suspends.count).is_equal_to(0)
+
+
+def test_cancel_all_without_countdowns_returns_zero(sleeper: Sleeper) -> None:
+    assert_that(sleeper.cancel_all()).is_equal_to(0)
 
 
 # --- painting and page switches ---
@@ -357,7 +440,7 @@ def test_soonest_text_is_the_soonest_running_countdown(sleeper: Sleeper, clock: 
 
 
 def test_the_ticker_expires_countdowns_on_its_own(clock: FakeClock, suspends: Suspends) -> None:
-    sleeper = Sleeper(clock=clock, suspender=suspends, interval=0.01)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspends, interval=0.01)
     sleeper.start("k1", 5)
     clock.now += 5
     sleeper.start_ticker()
@@ -395,7 +478,7 @@ def test_stop_from_the_ticker_thread_does_not_join_itself(clock: FakeClock) -> N
             errors.append(exc)
         done.set()
 
-    sleeper = Sleeper(clock=clock, suspender=suspender, interval=0.01)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspender, interval=0.01)
     holder.append(sleeper)
     sleeper.start("k1", 1)
     clock.now += 1
@@ -419,7 +502,7 @@ def test_a_stop_during_start_waits_for_the_thread_to_be_running(
                 stopping.wait(_WAIT)  # a window in which stop() could see the thread before it was started
             super().start()
 
-    sleeper = Sleeper(clock=clock, suspender=Suspends(), interval=0.05)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=Suspends(), interval=0.05)
 
     def stopper() -> None:
         assert published.wait(_WAIT)
@@ -450,7 +533,7 @@ def plugin_fixture() -> ModuleType:
 
 @pytest.fixture(name="loop_clock")
 def loop_clock_fixture(monkeypatch: pytest.MonkeyPatch, clock: FakeClock) -> Iterator[FakeClock]:
-    sleeper = Sleeper(clock=clock, suspender=lambda: power.suspend(), interval=3600)
+    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=lambda: power.suspend(), interval=3600)
     monkeypatch.setattr(sleep_card, "_sleeper", sleeper)
     yield clock
     sleeper.stop()
@@ -623,6 +706,27 @@ def test_minutes_default_to_one(key: Harness) -> None:
     assert_that(_title_now(key)).is_equal_to("1:00")
 
 
+def test_the_cancel_action_cancels_every_countdown_and_reports_how_many(key: Harness, suspended: list[str]) -> None:
+    key.appear({})
+    _face(key)
+    _run(key, _AFTER, minutes=5)
+    _title_now(key)
+    sleep_card._sleeper.start("other", 60)
+
+    result = key.run_action("com.decker.utilities.sleep-cancel", {}, with_card=False)
+
+    assert_that(result).contains_entry({"ok": True}, {"value": 2})
+    assert_that(_title_now(key)).is_equal_to("")
+    assert_that(_variable(key)).contains_entry({"value": ""})
+    assert_that(suspended).is_empty()
+
+
+def test_the_cancel_action_with_nothing_running_returns_zero(key: Harness) -> None:
+    result = key.run_action("com.decker.utilities.sleep-cancel", {}, with_card=False)
+
+    assert_that(result).contains_entry({"ok": True}, {"value": 0})
+
+
 def test_the_sleep_and_lock_actions_call_power(key: Harness, suspended: list[str]) -> None:
     assert_that(key.run_action("com.decker.utilities.sleep", {}, with_card=False)).contains_entry({"ok": True})
     assert_that(key.run_action("com.decker.utilities.lock", {}, with_card=False)).contains_entry({"ok": True})
@@ -687,3 +791,6 @@ def test_the_manifest_declares_the_card_actions_and_variable() -> None:
     minutes = actions[_AFTER].settings[0]
     assert_that((minutes.key, minutes.default)).is_equal_to(("minutes", 1))
     assert_that([v.name for v in _MANIFEST.variables]).contains("sleep_in")
+    cancel = actions["com.decker.utilities.sleep-cancel"]
+    assert_that((cancel.name, cancel.icon, cancel.scope)).is_equal_to(("Cancel sleep countdowns", "fas:ban", "global"))
+    assert_that(cancel.tooltip).contains("removed").contains("keep running")
