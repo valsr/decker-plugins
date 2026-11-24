@@ -1,8 +1,24 @@
 """Countdown and Timer arithmetic and time formatting shared by the Sleep card and the timer cards."""
 
+import sys
 import time
 from collections.abc import Callable
 from typing import Literal
+
+
+def sleep_inclusive_clock() -> float:
+    """Seconds on a clock that keeps counting while the machine is suspended (the one clock timers measure on).
+
+    Linux: CLOCK_BOOTTIME. macOS: CLOCK_MONOTONIC, which counts through sleep there. Windows: ``time.monotonic``, which
+    does too. Anything else falls back to wall time.
+    """
+    if hasattr(time, "CLOCK_BOOTTIME"):
+        return time.clock_gettime(time.CLOCK_BOOTTIME)
+    if sys.platform == "darwin":
+        return time.clock_gettime(time.CLOCK_MONOTONIC)
+    if sys.platform == "win32":
+        return time.monotonic()
+    return time.time()
 
 
 class Countdown:
@@ -16,7 +32,7 @@ class Countdown:
         self,
         seconds: float,
         clock: Callable[[], float] = time.monotonic,
-        wall_clock: Callable[[], float] = time.time,
+        wall_clock: Callable[[], float] = sleep_inclusive_clock,
     ) -> None:
         self._clock = clock
         self._wall_clock = wall_clock
@@ -42,13 +58,13 @@ _GRACE_SECONDS = 5.0  # a timer found this far past its end finished unseen; it 
 class Timer:
     """A pausable timer on an injectable clock; the card drives it with ``tick``.
 
-    It measures elapsed time on the monotonic clock only. That clock stops while the machine sleeps on Linux and macOS
-    (a running timer simply continues with its remaining time after the wake) and keeps counting on Windows, where a
-    timer may be found long past its end: ``tick`` then finishes it quietly instead of ringing late.
+    It measures elapsed time on one clock that keeps counting while the machine sleeps (``sleep_inclusive_clock``), so
+    its remaining time is always real time. A timer whose end falls inside a system sleep is finished at the wake and
+    shows 0:00; if that is more than the grace past its end, ``tick`` finishes it quietly instead of ringing late.
     """
 
     def __init__(
-        self, duration: float, clock: Callable[[], float] = time.monotonic, grace: float = _GRACE_SECONDS
+        self, duration: float, clock: Callable[[], float] = sleep_inclusive_clock, grace: float = _GRACE_SECONDS
     ) -> None:
         self.duration = duration
         self.state: TimerState = "idle"
