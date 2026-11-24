@@ -64,6 +64,60 @@
             "special_value": "∞ (no limit)"
           }
         ]
+      },
+      {
+        "id": "com.decker.utilities.page",
+        "name": "Page",
+        "tooltip": "Go to the next or previous page, or to a chosen one",
+        "icon": "fas:file",
+        "appearance": {
+          "background": "#000000"
+        },
+        "settings": [
+          {
+            "key": "color",
+            "type": "color",
+            "label": "Icon colour",
+            "default": "#ffffff",
+            "alpha": true
+          }
+        ],
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.page",
+            "args": {
+              "mode": "next",
+              "wrap": false
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.profile",
+        "name": "Profile",
+        "tooltip": "Go to the next or previous profile, or to a chosen one",
+        "icon": "fas:layer-group",
+        "appearance": {
+          "background": "#000000"
+        },
+        "settings": [
+          {
+            "key": "color",
+            "type": "color",
+            "label": "Icon colour",
+            "default": "#ffffff",
+            "alpha": true
+          }
+        ],
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.profile",
+            "args": {
+              "mode": "next",
+              "wrap": false
+            }
+          }
+        }
       }
     ],
     "actions": [
@@ -108,6 +162,92 @@
         "icon": "icons/counter",
         "scope": "plugin",
         "settings": []
+      },
+      {
+        "id": "com.decker.utilities.page",
+        "name": "Page",
+        "tooltip": "Go to the next or previous page, or to a chosen one",
+        "icon": "fas:file",
+        "scope": "global",
+        "settings": [
+          {
+            "key": "mode",
+            "type": "choice",
+            "label": "Go to",
+            "default": "next",
+            "options": [
+              {
+                "label": "A chosen page",
+                "value": "page"
+              },
+              {
+                "label": "Next page",
+                "value": "next"
+              },
+              {
+                "label": "Previous page",
+                "value": "previous"
+              }
+            ]
+          },
+          {
+            "key": "profile",
+            "type": "profile",
+            "label": "Profile (chosen page only)"
+          },
+          {
+            "key": "page",
+            "type": "page",
+            "label": "Page (chosen page only)",
+            "profile_field": "profile"
+          },
+          {
+            "key": "wrap",
+            "type": "bool",
+            "label": "Wrap around (next and previous only)",
+            "default": false
+          }
+        ]
+      },
+      {
+        "id": "com.decker.utilities.profile",
+        "name": "Profile",
+        "tooltip": "Go to the next or previous profile, or to a chosen one",
+        "icon": "fas:layer-group",
+        "scope": "global",
+        "settings": [
+          {
+            "key": "mode",
+            "type": "choice",
+            "label": "Go to",
+            "default": "next",
+            "options": [
+              {
+                "label": "A chosen profile",
+                "value": "profile"
+              },
+              {
+                "label": "Next profile",
+                "value": "next"
+              },
+              {
+                "label": "Previous profile",
+                "value": "previous"
+              }
+            ]
+          },
+          {
+            "key": "profile",
+            "type": "profile",
+            "label": "Profile (chosen profile only)"
+          },
+          {
+            "key": "wrap",
+            "type": "bool",
+            "label": "Wrap around (next and previous only)",
+            "default": false
+          }
+        ]
       }
     ],
     "icon_packs": [
