@@ -245,6 +245,112 @@
             }
           }
         }
+      },
+      {
+        "id": "com.decker.utilities.deck-brightness-level",
+        "name": "Deck Brightness Level",
+        "tooltip": "Shows the Stream Deck's brightness; press to raise it, double press to lower it, long press to set it to 75%",
+        "icon": "icons/utilities",
+        "appearance": {
+          "background": "#000000"
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "increase",
+              "value": 10
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 10
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "set",
+              "value": 75
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.deck-brightness-up",
+        "name": "Deck Brightness Up",
+        "tooltip": "Raise the Stream Deck's brightness; double press for a small step, long press to set 75%",
+        "icon": "icons/utilities",
+        "static": true,
+        "appearance": {
+          "background": "#000000",
+          "icon": {
+            "ref": "decker:logo",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "increase",
+              "value": 10
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "increase",
+              "value": 5
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "set",
+              "value": 75
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.deck-brightness-down",
+        "name": "Deck Brightness Down",
+        "tooltip": "Lower the Stream Deck's brightness; double press for a small step, long press to set 25%",
+        "icon": "icons/utilities",
+        "static": true,
+        "appearance": {
+          "background": "#000000",
+          "icon": {
+            "ref": "decker:logo",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 10
+            }
+          },
+          "double_press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 5
+            }
+          },
+          "long_press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "set",
+              "value": 25
+            }
+          }
+        }
       }
     ],
     "actions": [
@@ -426,6 +532,44 @@
             "options_source": "monitors"
           }
         ]
+      },
+      {
+        "id": "com.decker.utilities.deck-brightness",
+        "name": "Deck Brightness",
+        "tooltip": "Raise, lower or set the Stream Deck's own brightness",
+        "icon": "icons/utilities",
+        "scope": "global",
+        "returns": "The brightness level sent, 0-100 (the server clamps it to 1-100)",
+        "settings": [
+          {
+            "key": "mode",
+            "type": "choice",
+            "label": "Mode",
+            "default": "increase",
+            "options": [
+              {
+                "label": "Increase",
+                "value": "increase"
+              },
+              {
+                "label": "Decrease",
+                "value": "decrease"
+              },
+              {
+                "label": "Set",
+                "value": "set"
+              }
+            ]
+          },
+          {
+            "key": "value",
+            "type": "int",
+            "label": "Value (%)",
+            "default": 10,
+            "min": 0,
+            "max": 100
+          }
+        ]
       }
     ],
     "icon_packs": [
@@ -443,6 +587,14 @@
       {
         "pattern": "brightness_level_{monitor}",
         "description": "Brightness of monitor N (1-based), 0-100"
+      },
+      {
+        "name": "deck_brightness_level",
+        "description": "First connected deck's brightness, 0-100 (empty if unknown)"
+      },
+      {
+        "pattern": "deck_brightness_level_{device}",
+        "description": "Brightness of the deck with this device id, 0-100"
       }
     ]
   }

@@ -8,6 +8,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from brightness import Monitor  # noqa: E402
+from deck_brightness import reset_for_tests  # noqa: E402
 from display_brightness import set_backend_for_tests  # noqa: E402
 
 
@@ -25,5 +26,6 @@ class _NoMonitors:
 @pytest.fixture(autouse=True)
 def _no_hardware() -> Iterator[None]:
     set_backend_for_tests(_NoMonitors())
+    reset_for_tests()
     yield
     set_backend_for_tests(None)

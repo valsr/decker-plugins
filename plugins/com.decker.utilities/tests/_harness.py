@@ -43,6 +43,9 @@ class Harness:
         self._backlog: deque[dict] = deque()  # received during run_action, not yet consumed by recv
         self._settings: dict[str, Any] = {}
         self._requests = 0
+        self.deck_levels: dict[str, int] = {DEVICE: 50}  # answers to get_deck_brightness; a missing device is an error
+        self.deck_gets: list[str] = []  # devices of every get_deck_brightness received
+        self.deck_sets: list[dict] = []  # payload of every set_deck_brightness received
         in_r, in_w = os.pipe()
         out_r, out_w = os.pipe()
         self._to_plugin = os.fdopen(in_w, "wb")
@@ -77,7 +80,34 @@ class Harness:
         self.seen.append(message["event"])
         return message
 
+    def connect(self, device: str) -> None:
+        """Tell the plugin a deck connected."""
+        self.send_event("device_connected", {"device": device})
+
+    def disconnect(self, device: str) -> None:
+        """Tell the plugin a deck went away."""
+        self.send_event("device_disconnected", {"device": device})
+
     def _read(self) -> dict:
+        message = self._read_raw()
+        self._serve_deck(message)
+        return message
+
+    def _serve_deck(self, message: dict) -> None:
+        """Play the server for deck brightness: answer gets from `deck_levels`, record gets and sets."""
+        payload = message.get("payload") or {}
+        if message["event"] == "set_deck_brightness":
+            self.deck_sets.append(payload)
+        elif message["event"] == "get_deck_brightness":
+            device = payload["device"]
+            self.deck_gets.append(device)
+            if device in self.deck_levels:
+                reply = {"request": payload["request"], "device": device, "percent": self.deck_levels[device]}
+            else:
+                reply = {"request": payload["request"], "error": f"unknown device {device}"}
+            self.send_event("deck_brightness", reply)
+
+    def _read_raw(self) -> dict:
         line: list[bytes] = []
         reader = threading.Thread(target=lambda: line.append(self._from_plugin.readline()), daemon=True)
         reader.start()
