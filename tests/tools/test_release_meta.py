@@ -22,13 +22,17 @@ def test_version_entry_sha_and_size(tmp_path: Path) -> None:
 
     assert_that(entry).is_equal_to(
         {
-            "version": "1.2.0",
-            "decker": ">=0.6",
+            "version": "2.0.0",
+            "decker": ">=0.7",
             "url": "https://example.com/c.deckerplugin",
             "size": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
             "released": "2026-11-16T19:00:00Z",
-            "contributes": {"cards": ["Counter"], "icon_packs": ["Counter icons"]},
+            "contributes": {
+                "cards": ["Counter"],
+                "actions": ["Count up", "Count down", "Reset count"],
+                "icon_packs": ["Counter icons"],
+            },
         }
     )
 
@@ -69,7 +73,7 @@ def test_write_sidecar_adds_plugin_id(tmp_path: Path) -> None:
 
     assert_that(sidecar.name).is_equal_to(package.name + ".json")
     data = json.loads(sidecar.read_text(encoding="utf-8"))
-    assert_that(data).contains_entry({"id": "com.decker.counter"}, {"version": "1.2.0"})
+    assert_that(data).contains_entry({"id": "com.decker.counter"}, {"version": "2.0.0"})
 
 
 def test_release_url_defaults_and_env(monkeypatch) -> None:  # type: ignore[no-untyped-def]

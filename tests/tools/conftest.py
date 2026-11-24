@@ -23,7 +23,7 @@ def write_plugin(plugins_dir: Path, plugin_id: str, version: str) -> Path:
     folder = plugins_dir / plugin_id
     folder.mkdir(parents=True, exist_ok=True)
     manifest = {
-        "format": 1,
+        "format": 3,
         "id": plugin_id,
         "name": "Demo",
         "version": version,

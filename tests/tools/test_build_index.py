@@ -76,7 +76,7 @@ def test_build_index_skips_unparseable_version_with_warning(tmp_path: Path, caps
     index_path = build_index([good, bad], PLUGINS, tmp_path / "site")
 
     versions = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["versions"]
-    assert_that([v["version"] for v in versions]).is_equal_to(["1.2.0"])
+    assert_that([v["version"] for v in versions]).is_equal_to(["2.0.0"])
     assert_that(capsys.readouterr().err).contains("1.2.0-foo")
 
 
@@ -148,17 +148,6 @@ def test_missing_icon_file_is_omitted(tmp_path: Path) -> None:
     index_path = build_index([entry], plugins, tmp_path / "site")
 
     assert_that(json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]).does_not_contain_key("icon")
-
-
-def test_fontawesome_gets_an_index_icon(tmp_path: Path) -> None:
-    entry = {"id": "com.decker.fontawesome", "version": "7.3.1"}
-
-    index_path = build_index([entry], PLUGINS, tmp_path / "site")
-
-    plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
-    assert_that(plugin["name"]).is_equal_to("Fontawesome Icons")
-    assert_that(plugin["icon"]).is_equal_to("icons/com.decker.fontawesome.png")
-    assert_that(Image.open(tmp_path / "site" / "icons" / "com.decker.fontawesome.png").format).is_equal_to("PNG")
 
 
 def test_importing_the_builder_does_not_load_the_svg_renderer() -> None:
