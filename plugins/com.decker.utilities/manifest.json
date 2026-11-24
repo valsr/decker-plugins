@@ -637,6 +637,15 @@
             "max": 1440
           }
         ]
+      },
+      {
+        "id": "com.decker.utilities.sleep-cancel",
+        "name": "Cancel sleep countdowns",
+        "tooltip": "Cancels every running Sleep countdown. Countdowns keep running when a Sleep key is removed or its page is left; use this to stop the ones of removed keys",
+        "icon": "fas:ban",
+        "scope": "global",
+        "returns": "How many countdowns were cancelled",
+        "settings": []
       }
     ],
     "icon_packs": [

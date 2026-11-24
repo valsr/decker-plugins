@@ -68,8 +68,10 @@ class Sleeper:
         clock: Callable[[], float] = time.monotonic,
         suspender: Callable[[], None] | None = None,
         interval: float = 1.0,
+        wall_clock: Callable[[], float] | None = None,
     ) -> None:
         self._clock = clock
+        self._wall_clock = wall_clock or _sleep_inclusive_clock()
         self._suspender = suspender or (lambda: power.suspend())
         self._interval = interval
         self._lock = threading.Lock()
@@ -84,7 +86,7 @@ class Sleeper:
     def start(self, context: str, seconds: float) -> None:
         """Start (or restart) the key's countdown."""
         with self._lock:
-            self._countdowns[context] = Countdown(seconds, self._clock)
+            self._countdowns[context] = Countdown(seconds, self._clock, self._wall_clock)
         self._changed(context)
 
     def running(self, context: str) -> bool:
@@ -104,6 +106,17 @@ class Sleeper:
         with self._lock:
             left = [c.remaining() for c in self._countdowns.values()]
         return fmt_ms(math.ceil(min(left))) if left else ""
+
+    def cancel_all(self) -> int:
+        """Cancel every running countdown (including those of keys that no longer exist); returns how many."""
+        with self._lock:
+            count = len(self._countdowns)
+            self._countdowns.clear()
+            faces = list(self._faces.values())
+        for face in faces:
+            self.paint(face)
+        _signal()
+        return count
 
     def clear(self) -> None:
         with self._lock:
@@ -167,22 +180,22 @@ class Sleeper:
 
     def tick(self) -> None:
         """Expire what is due, repaint the live keys, signal ``sleep_in``; safe to call from any thread."""
-        now = self._clock()
         with self._lock:
             had_any = bool(self._countdowns)
-            due = [c for c, countdown in self._countdowns.items() if countdown.expired()]
-            fire: list[str] = []
-            for context in due:
-                countdown = self._countdowns.pop(context)
-                if now - countdown.deadline > _LATE_SECONDS:
-                    _log.warning(
-                        "sleep countdown of %s was %.0f s overdue; not suspending late",
-                        context,
-                        now - countdown.deadline,
-                    )
+            due: list[str] = []
+            for context, countdown in list(self._countdowns.items()):
+                overdue = countdown.overdue()
+                if not countdown.expired() and overdue <= _LATE_SECONDS:
                     continue
-                self._firing.add(context)
-                fire.append(context)
+                del self._countdowns[context]
+                if overdue > _LATE_SECONDS:  # the machine slept or the process stalled: never suspend late
+                    _log.warning("sleep countdown of %s is %.0f s overdue; dropped", context, overdue)
+                else:
+                    due.append(context)
+            fire = due[:1]  # one suspend per tick: a second would suspend again right after the wake
+            for context in due[1:]:
+                _log.info("sleep countdown of %s fell due with another; dropped", context)
+            self._firing.update(fire)
             faces = list(self._faces.values())
         for face in faces:
             self.paint(face)
@@ -232,6 +245,13 @@ class Sleeper:
                 self.tick()
             except Exception:
                 _log.exception("sleep ticker failed")
+
+
+def _sleep_inclusive_clock() -> Callable[[], float]:
+    """A clock that keeps counting while the machine is suspended (CLOCK_BOOTTIME on Linux, wall time elsewhere)."""
+    if hasattr(time, "CLOCK_BOOTTIME"):
+        return lambda: time.clock_gettime(time.CLOCK_BOOTTIME)
+    return time.time
 
 
 def _signal() -> None:
@@ -310,6 +330,12 @@ def sleep_after(ctx: ActionCallContext) -> None:
     key = _key_of(ctx)
     _sleeper.start(key.context, _minutes(ctx.args.get("minutes", 1)) * 60)
     _sleeper.start_ticker()
+
+
+@action("com.decker.utilities.sleep-cancel")
+def sleep_cancel(ctx: ActionCallContext) -> int:  # pylint: disable=unused-argument
+    """Cancel every running Sleep countdown, also those of removed keys; returns how many were running."""
+    return _sleeper.cancel_all()
 
 
 @variable(_VARIABLE)

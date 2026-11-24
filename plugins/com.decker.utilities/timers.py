@@ -5,15 +5,30 @@ from collections.abc import Callable
 
 
 class Countdown:
-    """Time left until a deadline on an injectable monotonic clock."""
+    """Time left until a deadline on an injectable monotonic clock.
 
-    def __init__(self, seconds: float, clock: Callable[[], float] = time.monotonic) -> None:
+    The monotonic clock stops while the machine sleeps (Linux, macOS), so a second clock that keeps counting through
+    sleep stores the same deadline; ``overdue`` measures on it how late the countdown really is.
+    """
+
+    def __init__(
+        self,
+        seconds: float,
+        clock: Callable[[], float] = time.monotonic,
+        wall_clock: Callable[[], float] = time.time,
+    ) -> None:
         self._clock = clock
+        self._wall_clock = wall_clock
         self.deadline = clock() + seconds
+        self._wall_deadline = wall_clock() + seconds
 
     def remaining(self) -> float:
         """Seconds left, never below 0."""
         return max(0.0, self.deadline - self._clock())
+
+    def overdue(self) -> float:
+        """Seconds past the deadline on the sleep-inclusive clock (negative while it is still ahead)."""
+        return self._wall_clock() - self._wall_deadline
 
     def expired(self) -> bool:
         return self.remaining() <= 0

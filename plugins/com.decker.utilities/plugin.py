@@ -4,7 +4,7 @@ from counter_card import CounterCard, decrement, increment, reset
 from deck_brightness import DeckBrightnessLevelCard, deck_brightness
 from display_brightness import BrightnessLevelCard, brightness, monitor_options
 from navigation import PageCard, ProfileCard, page, profile
-from sleep_card import SleepCard, lock, sleep, sleep_after, sleep_press
+from sleep_card import SleepCard, lock, sleep, sleep_after, sleep_cancel, sleep_press
 
 __all__ = [
     "BrightnessLevelCard",
@@ -24,5 +24,6 @@ __all__ = [
     "reset",
     "sleep",
     "sleep_after",
+    "sleep_cancel",
     "sleep_press",
 ]
