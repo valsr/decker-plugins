@@ -467,3 +467,22 @@ def test_a_card_tracked_before_the_poll_starts_still_repaints(backend: FakeBacke
         assert_that(early.titles[-1]).is_equal_to("20%")
     finally:
         started.stop()
+
+
+# --- teardown ---
+
+
+def test_a_late_begin_run_after_teardown_does_not_touch_the_real_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    import conftest
+    import display_brightness
+
+    asked: list[bool] = []
+    monkeypatch.setattr(display_brightness, "default_backend", lambda: asked.append(True) or FakeBackend({}))
+    session = conftest.hardware_free()
+    next(session)
+    list(session)  # teardown
+
+    started = display_brightness._service.begin_run()
+    started.stop()
+
+    assert_that(asked).is_empty()

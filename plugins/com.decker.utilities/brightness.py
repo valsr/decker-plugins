@@ -287,6 +287,9 @@ def label_monitors(monitors: list[Monitor]) -> list[tuple[str, str]]:
     return labels
 
 
+_STOP_JOIN_SECONDS = 5.0
+
+
 class BrightnessCache:
     """Last known brightness per monitor, refreshed by a background thread every ``interval`` seconds."""
 
@@ -299,19 +302,23 @@ class BrightnessCache:
         self._levels: dict[str, int] = {}
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._lifecycle = threading.Lock()  # start and stop are check-then-act on _thread
 
     def start(self) -> None:
-        if self._thread is not None:
-            return
-        self._stop.clear()
-        self._thread = threading.Thread(target=self._run, name="brightness-poll", daemon=True)
-        self._thread.start()
+        with self._lifecycle:
+            if self._thread is not None:
+                return
+            self._stop.clear()
+            thread = threading.Thread(target=self._run, name="brightness-poll", daemon=True)
+            thread.start()
+            self._thread = thread  # published only once it runs, so stop() never joins an unstarted thread
 
     def stop(self) -> None:
-        thread, self._thread = self._thread, None
-        self._stop.set()
-        if thread is not None:
-            thread.join()
+        with self._lifecycle:
+            thread, self._thread = self._thread, None
+            self._stop.set()
+            if thread is not None and thread is not threading.current_thread():
+                thread.join(_STOP_JOIN_SECONDS)
 
     def monitors(self) -> list[Monitor]:
         with self._lock:

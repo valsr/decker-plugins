@@ -23,9 +23,14 @@ class _NoMonitors:
         raise KeyError(monitor_id)
 
 
-@pytest.fixture(autouse=True)
-def _no_hardware() -> Iterator[None]:
+def hardware_free() -> Iterator[None]:
+    """Setup and teardown of the autouse fixture; the teardown keeps the empty backend, never the real default."""
     set_backend_for_tests(_NoMonitors())
     reset_for_tests()
     yield
-    set_backend_for_tests(None)
+    set_backend_for_tests(_NoMonitors())
+
+
+@pytest.fixture(autouse=True)
+def _no_hardware() -> Iterator[None]:
+    yield from hardware_free()
