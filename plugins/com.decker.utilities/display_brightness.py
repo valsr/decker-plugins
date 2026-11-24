@@ -83,7 +83,6 @@ class _Service:
         """Start polling for a new SDK runtime; its variables and cards are not known to the server yet."""
         with self._lock:
             self._registered.clear()
-            self._cards.clear()
         cache = self.cache()
         cache.start()
         return cache

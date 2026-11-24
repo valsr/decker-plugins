@@ -434,3 +434,36 @@ def test_manifest_declares_the_variable_and_the_pattern() -> None:
     declared = [(v.name, v.pattern) for v in _MANIFEST.variables]
 
     assert_that(declared).contains((("brightness_level", None)), (None, "brightness_level_{monitor}"))
+
+
+# --- startup ordering ---
+
+
+class _RecordingCard:
+    context = "early"
+    settings: dict = {"monitor": "a"}
+
+    def __init__(self) -> None:
+        self.titles: list[str] = []
+
+    def set_icon(self, ref: str, color: str | None = None) -> None:
+        pass
+
+    def set_title(self, title: str) -> None:
+        self.titles.append(title)
+
+
+def test_a_card_tracked_before_the_poll_starts_still_repaints(backend: FakeBackend) -> None:
+    from display_brightness import _service
+
+    early = _RecordingCard()
+    _service.track(early)  # type: ignore[arg-type]
+    started = _service.begin_run()
+    try:
+        _wait_monitors(2)
+        backend.levels["a"] = 20
+        cache().poll_once()
+
+        assert_that(early.titles[-1]).is_equal_to("20%")
+    finally:
+        started.stop()
