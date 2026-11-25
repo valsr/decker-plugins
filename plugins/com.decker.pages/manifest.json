@@ -4,7 +4,7 @@
   "name": "Pages",
   "version": "3.0.0",
   "author": "Decker",
-  "description": "Keys for moving between a device's pages.",
+  "description": "Actions for moving between a device's pages.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/pages",
   "category": "Utilities",

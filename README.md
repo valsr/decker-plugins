@@ -55,7 +55,7 @@ Brightness/Deck Brightness Up and Down functions are global actions only (Action
 - Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
   double or long press resets.
 - The Counter card offers the same functions as the standalone Counter. Pages and Profiles (3.0.0) ship global
-  actions only (`next`, `previous`, `goto`) and no cards; so does the `page` and `profile` action here.
+  actions only (`next`, `previous`, `goto`) and no cards; as do the `page` and `profile` actions here.
 
 Global actions: `brightness`, `deck-brightness`, `sleep`, `lock`, `page`, `profile` and `sleep-cancel` (cancels every
 running Sleep countdown; countdowns keep running when their key is removed or its page is left). Plugin-scoped actions
@@ -100,8 +100,9 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
     ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
     `ubuntu-latest`, `windows-latest`, `macos-latest` and in `fedora:latest` and `archlinux:latest` containers. On each
     it ran the tool tests (33 passed) and the
-    plugin suites (counter 19, pages 21, profiles 23 passed) against the pinned Decker,
-    including Counter's font path with the bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
+    Counter suite (19 passed) against the pinned Decker. The pages (21) and profiles (23) counts are from a local run
+    on `feat/card-action-split`; CI for that branch is pending. The Counter run included Counter's font path with the
+    bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
     cover a real Stream Deck, the real Decker UI, or a real plugin process under the Decker supervisor on any OS.
 [^2]: Since 1.1.0 Counter draws with Decker's bundled DejaVu Sans Bold through the SDK (`decker_plugin_sdk.fonts`) on
     every OS, and falls back to Pillow's default font on a Decker without `decker_plugin_sdk.fonts`.
