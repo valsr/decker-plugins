@@ -274,7 +274,7 @@ def _args(mode: str, value: int) -> tuple[str, dict]:
 
 
 def test_manifest_level_card_bindings_and_a_built_in_catalogue_icon() -> None:
-    assert_that(_card(_LEVEL).icon).is_equal_to("fas:toolbox")
+    assert_that(_card(_LEVEL).icon).is_equal_to("fas:tv")
     assert_that(_bindings(_LEVEL)).is_equal_to(
         {"press": _args("increase", 10), "double_press": _args("decrease", 10), "long_press": _args("set", 75)}
     )
