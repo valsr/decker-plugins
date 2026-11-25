@@ -4,7 +4,7 @@
   "name": "Profiles",
   "version": "3.0.0",
   "author": "Decker",
-  "description": "Keys for moving between a device's profiles.",
+  "description": "Actions for moving between a device's profiles.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/profiles",
   "category": "Utilities",
