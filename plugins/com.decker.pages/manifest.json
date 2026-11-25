@@ -2,13 +2,13 @@
   "format": 3,
   "id": "com.decker.pages",
   "name": "Pages",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": "Decker",
   "description": "Actions for moving between a device's pages.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/pages",
   "category": "Utilities",
-  "decker": ">=0.7",
+  "decker": ">=0.8",
   "runtime": {
     "type": "python",
     "entry": "plugin.py"
@@ -64,6 +64,91 @@
             "profile_field": "profile"
           }
         ]
+      }
+    ],
+    "presets": [
+      {
+        "id": "com.decker.pages.preset-next",
+        "name": "Next page",
+        "tooltip": "Go to the next page",
+        "icon": "fas:forward",
+        "appearance": {
+          "icon": {
+            "ref": "fas:forward",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.pages.next",
+            "args": {
+              "wrap": true
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.pages.preset-previous",
+        "name": "Previous page",
+        "tooltip": "Go to the previous page",
+        "icon": "fas:backward",
+        "appearance": {
+          "icon": {
+            "ref": "fas:backward",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.pages.previous",
+            "args": {
+              "wrap": true
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.pages.preset-goto",
+        "name": "Go to page",
+        "tooltip": "Go to a chosen page",
+        "icon": "fas:file",
+        "appearance": {
+          "icon": {
+            "ref": "fas:file",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.pages.goto"
+          }
+        }
+      },
+      {
+        "id": "com.decker.pages.preset-name",
+        "name": "Page Name",
+        "tooltip": "Shows the name of the current page",
+        "icon": "fas:tag",
+        "appearance": {
+          "title": {
+            "text": "{page_name}",
+            "position": "middle",
+            "size": 16
+          }
+        }
+      },
+      {
+        "id": "com.decker.pages.preset-count",
+        "name": "Page Count",
+        "tooltip": "Shows the current page number and the page count",
+        "icon": "fas:hashtag",
+        "appearance": {
+          "title": {
+            "text": "{page_index} / {page_count}",
+            "position": "middle",
+            "size": 24
+          }
+        }
       }
     ]
   }

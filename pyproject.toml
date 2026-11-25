@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Plugins for Decker and the tooling that packages and publishes them"
 requires-python = ">=3.14"
 dependencies = [
-    "decker @ git+https://github.com/valsr/decker.git@c13dcece675831cbcfe07d880c3bbc54429c72ba",
+    "decker @ git+https://github.com/valsr/decker.git@5239fd597b42297b0f6e8bd2aa49b8743332f436",
     "packaging>=24",
 ]
 
