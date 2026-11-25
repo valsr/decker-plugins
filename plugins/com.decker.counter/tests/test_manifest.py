@@ -10,7 +10,7 @@ _MANIFEST = PluginManifest.load(Path(__file__).parents[1] / "manifest.json")
 
 def test_identity_and_version_constraints() -> None:
     assert_that(_MANIFEST.id).is_equal_to("com.decker.counter")
-    assert_that(_MANIFEST.version).is_equal_to("2.0.1")
+    assert_that(_MANIFEST.version).is_equal_to("2.0.2")
     assert_that(_MANIFEST.decker).is_equal_to(">=0.8.1")
 
 

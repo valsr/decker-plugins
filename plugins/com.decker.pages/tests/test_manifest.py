@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from assertpy import assert_that
 from decker.common.version import is_compatible
-from decker.plugin.icons import resolve_icon
+from decker.plugin.icons import read_icon
 from decker.plugin.manifest import PluginManifest
 from decker.plugin.settings_schema import SettingField
 
@@ -31,7 +31,7 @@ def test_manifest_is_format_3_with_global_actions(manifest: PluginManifest) -> N
     assert_that(manifest.id).is_equal_to(_PLUGIN_ID)
     assert_that(manifest.name).is_equal_to("Pages")
     assert_that(manifest.format).is_equal_to(3)
-    assert_that(manifest.version).is_equal_to("3.1.0")
+    assert_that(manifest.version).is_equal_to("3.1.1")
     assert_that(manifest.decker).is_equal_to(">=0.8")
     assert_that(is_compatible(manifest.decker, "0.7.2")).is_false()
     assert_that(is_compatible(manifest.decker, "0.8.0")).is_true()
@@ -113,9 +113,9 @@ def test_presets_load_with_the_pinned_decker(manifest: PluginManifest) -> None:
 
 
 def test_icons_resolve(manifest: PluginManifest) -> None:
-    assert_that(resolve_icon(_DIR, manifest.icon)).is_not_none()
+    assert_that(read_icon(_DIR, manifest.icon)).is_not_none()
     for spec in manifest.actions:
-        assert_that(resolve_icon(_DIR, spec.icon)).is_not_none()
+        assert_that(read_icon(_DIR, spec.icon)).is_not_none()
 
 
 def test_packages_without_tests_or_assets(tmp_path: Path) -> None:

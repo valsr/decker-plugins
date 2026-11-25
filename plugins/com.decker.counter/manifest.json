@@ -2,11 +2,11 @@
   "format": 3,
   "id": "com.decker.counter",
   "name": "Counter",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "author": "Decker",
   "description": "Counts key presses.",
   "homepage": "https://github.com/valsr/decker-plugins",
-  "icon": "icons/counter",
+  "icon": "fas:calculator",
   "category": "Utilities",
   "decker": ">=0.8.1",
   "runtime": { "type": "python", "entry": "plugin.py", "requirements": ["pillow>=12"] },
@@ -16,7 +16,7 @@
         "id": "com.decker.counter.counter",
         "name": "Counter",
         "tooltip": "Press to count up, double press to count down, long press to reset",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "actions": ["com.decker.counter.increment", "com.decker.counter.decrement", "com.decker.counter.reset"],
         "appearance": { "background": "#1f618d" },
         "bindings": {
@@ -36,7 +36,7 @@
         "id": "com.decker.counter.increment",
         "name": "Count up",
         "tooltip": "Adds the step to the Counter card's count",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "scope": "plugin",
         "settings": [
           { "key": "step", "type": "int", "label": "Step", "default": 1, "min": 1, "max": 9999 }
@@ -46,7 +46,7 @@
         "id": "com.decker.counter.decrement",
         "name": "Count down",
         "tooltip": "Subtracts the step from the Counter card's count",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "scope": "plugin",
         "settings": [
           { "key": "step", "type": "int", "label": "Step", "default": 1, "min": 1, "max": 9999 }
@@ -56,7 +56,7 @@
         "id": "com.decker.counter.reset",
         "name": "Reset count",
         "tooltip": "Sets the Counter card's count back to 0",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "scope": "plugin",
         "settings": []
       }

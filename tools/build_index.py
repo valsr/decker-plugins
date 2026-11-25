@@ -40,6 +40,24 @@ def _write_icon(source: Path, destination: Path, plugin_id: str) -> bool:
     return True
 
 
+def _write_builtin_icon(ref: str, destination: Path, plugin_id: str) -> bool:
+    """Write the Font Awesome icon a `fas:`/`far:`/`fab:` ref names as a PNG at ICON_SIZE."""
+    try:
+        from decker.asset.builtinicons import read_builtin_ref  # noqa: PLC0415
+        from decker.asset.renderer import AssetRenderer  # noqa: PLC0415
+
+        data = read_builtin_ref(ref)
+        image = AssetRenderer().render_bytes(data, ICON_SIZE, ICON_SIZE) if data else None
+        if image is None:
+            raise ValueError(f"unknown built-in icon {ref}")
+        image.save(destination, format="PNG")
+    except Exception as exc:  # noqa: BLE001  (a broken icon must not stop the index being built)
+        print(f"warning: skipping the icon of {plugin_id}: {exc}", file=sys.stderr)
+        destination.unlink(missing_ok=True)
+        return False
+    return True
+
+
 def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path, generated: str | None = None) -> Path:
     """Group sidecar entries (each carrying its plugin `id`) by plugin and write `out_dir/index.json`.
 
@@ -69,10 +87,18 @@ def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path,
         for key in ("author", "description", "category", "homepage"):
             if manifest.get(key):
                 plugin[key] = manifest[key]
-        icon = _icon_source(folder, manifest.get("icon"))
-        if icon is not None:
+        icon_ref = manifest.get("icon")
+        icon = _icon_source(folder, icon_ref)
+        builtin = isinstance(icon_ref, str) and icon_ref[:4] in ("fas:", "far:", "fab:")
+        if icon is not None or builtin:
             (out_dir / "icons").mkdir(exist_ok=True)
-            if _write_icon(icon, out_dir / "icons" / f"{plugin_id}.png", plugin_id):
+            target = out_dir / "icons" / f"{plugin_id}.png"
+            written = (
+                _write_icon(icon, target, plugin_id)
+                if icon is not None
+                else _write_builtin_icon(icon_ref, target, plugin_id)
+            )
+            if written:
                 plugin["icon"] = f"icons/{plugin_id}.png"
         plugin["versions"] = sorted(grouped[plugin_id], key=lambda v: parse_plugin_version(v["version"]), reverse=True)
         plugins.append(plugin)

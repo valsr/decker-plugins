@@ -2,11 +2,11 @@
   "format": 3,
   "id": "com.decker.pages",
   "name": "Pages",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "author": "Decker",
   "description": "Actions for moving between a device's pages.",
   "homepage": "https://github.com/valsr/decker-plugins",
-  "icon": "icons/pages",
+  "icon": "fas:file",
   "category": "Utilities",
   "decker": ">=0.8",
   "runtime": {
@@ -19,7 +19,7 @@
         "id": "com.decker.pages.next",
         "name": "Next page",
         "tooltip": "Go to the next page",
-        "icon": "icons/pages",
+        "icon": "fas:file",
         "scope": "global",
         "settings": [
           {
@@ -34,7 +34,7 @@
         "id": "com.decker.pages.previous",
         "name": "Previous page",
         "tooltip": "Go to the previous page",
-        "icon": "icons/pages",
+        "icon": "fas:file",
         "scope": "global",
         "settings": [
           {
@@ -49,7 +49,7 @@
         "id": "com.decker.pages.goto",
         "name": "Go to page",
         "tooltip": "Go to a chosen page, in this or another profile",
-        "icon": "icons/pages",
+        "icon": "fas:file",
         "scope": "global",
         "settings": [
           {
