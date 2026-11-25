@@ -1,51 +1,14 @@
-"""Page and Profile: global actions that move a device between pages or profiles, and the cards that bind them.
+"""Page and Profile: global actions that move a device between pages or profiles.
 
-Each card's gestures bind to the global action with their own arguments; the card face follows the press binding:
-the target page's name, the target profile's icon and name, or a caret for next and previous. The caret SVGs
-(``assets/``, Font Awesome) use ``currentColor``, which renders black, so the chosen colour is substituted in.
+They are reached from the Actions tab; there are no preset cards for them.
 """
 
-import re
-from pathlib import Path
 from typing import Any
 
-from decker_plugin_sdk import ActionCallContext, ActionError, CardContext, DeckerPlugin, action, card
+from decker_plugin_sdk import ActionCallContext, ActionError, action
 
 PAGE = "com.decker.utilities.page"
 PROFILE = "com.decker.utilities.profile"
-
-_ASSETS = Path(__file__).parent / "assets"
-_COLOUR = re.compile(r"^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$")
-_DEFAULT_COLOUR = "#ffffff"
-_CARET_SHARE = 0.6
-_ROOT = re.compile(r"<svg\b[^>]*>")
-_VIEWBOX = re.compile(r'viewBox="\s*([-\d.]+)[\s,]+([-\d.]+)[\s,]+([-\d.]+)[\s,]+([-\d.]+)\s*"')
-_RIGHT_INK = (64.0, 96.0, 256.0, 416.0)  # the drawn area of Font Awesome's carets inside their 256x512 viewBox
-_LEFT_INK = (0.0, 95.0, 193.0, 416.0)
-
-
-def render_caret(svg: bytes, color: Any, ink: tuple[float, float, float, float] | None = None) -> bytes:
-    """Recolour a ``currentColor`` SVG and centre it in a square viewBox so it fills about 60% of the key.
-
-    ``ink`` is the drawn area (x0, y0, x1, y1) in viewBox units; it defaults to the whole viewBox.
-    """
-    colour = color if isinstance(color, str) and _COLOUR.match(color) else _DEFAULT_COLOUR
-    alpha = int(colour[7:9], 16) / 255 if len(colour) == 9 else 1.0
-    text = svg.decode("utf-8")
-    root = _ROOT.search(text)
-    if root is None:
-        return svg
-    head, tail = root.group(0), text[root.end() :]
-    match = _VIEWBOX.search(head)
-    if match is not None:
-        x, y, width, height = (float(g) for g in match.groups())
-        x0, y0, x1, y1 = ink if ink is not None else (x, y, x + width, y + height)
-        side = max(x1 - x0, y1 - y0) / _CARET_SHARE
-        box = f'viewBox="{(x0 + x1 - side) / 2:g} {(y0 + y1 - side) / 2:g} {side:g} {side:g}"'
-        head = head.replace(match.group(0), box)
-    if alpha < 1.0:
-        head = head[:-1] + f' opacity="{alpha:.3f}">'
-    return (text[: root.start()] + head + tail.replace("currentColor", colour[:7])).encode("utf-8")
 
 
 def _live_id(value: Any) -> bool:
@@ -104,64 +67,3 @@ def profile(ctx: ActionCallContext) -> None:
         nav.go_to_profile(target[0])
     else:
         raise ActionError(f"unknown mode {mode!r}")
-
-
-def _press_args(bindings: Any, action_id: str) -> dict[str, Any]:
-    press = bindings.get("press") if isinstance(bindings, dict) else None
-    if not isinstance(press, dict) or press.get("action") != action_id:
-        return {}
-    args = press.get("args")
-    return args if isinstance(args, dict) else {}
-
-
-class _NavigationCard(DeckerPlugin):
-    """Draws what the press binding does; the binding itself does the navigating."""
-
-    action_id = ""
-
-    def on_will_appear(self, ctx: CardContext) -> None:
-        self._show(ctx)
-
-    def on_settings_changed(self, ctx: CardContext) -> None:
-        self._show(ctx)
-
-    def _show(self, ctx: CardContext) -> None:
-        args = _press_args(ctx.bindings, self.action_id)
-        mode = args.get("mode")
-        if mode in ("next", "previous"):
-            asset, ink = ("caret-right.svg", _RIGHT_INK) if mode == "next" else ("caret-left.svg", _LEFT_INK)
-            ctx.set_image(render_caret((_ASSETS / asset).read_bytes(), ctx.settings.get("color"), ink), "svg")
-            ctx.set_title("")
-        else:
-            self._show_target(ctx, args)
-
-    def _show_target(self, ctx: CardContext, args: dict[str, Any]) -> None:
-        ctx.clear_image()
-        ctx.set_title("")
-
-
-@card(PAGE)
-class PageCard(_NavigationCard):
-    """Next/previous caret, or the name of the page the press goes to."""
-
-    action_id = PAGE
-
-    def _show_target(self, ctx: CardContext, args: dict[str, Any]) -> None:
-        target = _page_target(args.get("page")) if args.get("mode") == "page" else None
-        ctx.clear_image()
-        ctx.set_title(target[1] if target else "")
-
-
-@card(PROFILE)
-class ProfileCard(_NavigationCard):
-    """Next/previous caret, or the icon and name of the profile the press goes to."""
-
-    action_id = PROFILE
-
-    def _show_target(self, ctx: CardContext, args: dict[str, Any]) -> None:
-        target = _profile_target(args.get("profile")) if args.get("mode") == "profile" else None
-        if target and target[2]:
-            ctx.set_icon(target[2])
-        else:
-            ctx.clear_image()
-        ctx.set_title(target[1] if target else "")
