@@ -13,7 +13,6 @@ The ticker is not an SDK ``@main``: the SDK runs mains one after another, and th
 import logging
 import math
 import threading
-import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Literal
@@ -59,13 +58,11 @@ class Sleeper:
 
     def __init__(
         self,
-        clock: Callable[[], float] = time.monotonic,
+        clock: Callable[[], float] = sleep_inclusive_clock,
         suspender: Callable[[], None] | None = None,
         interval: float = 1.0,
-        wall_clock: Callable[[], float] | None = None,
     ) -> None:
         self._clock = clock
-        self._wall_clock = wall_clock or sleep_inclusive_clock
         self._suspender = suspender or (lambda: power.suspend())
         self._lock = threading.Lock()
         self._countdowns: dict[str, Countdown] = {}
@@ -78,7 +75,7 @@ class Sleeper:
     def start(self, context: str, seconds: float) -> None:
         """Start (or restart) the key's countdown."""
         with self._lock:
-            self._countdowns[context] = Countdown(seconds, self._clock, self._wall_clock)
+            self._countdowns[context] = Countdown(seconds, self._clock)
         self._changed(context)
 
     def running(self, context: str) -> bool:
@@ -174,6 +171,7 @@ class Sleeper:
         """Expire what is due, repaint the live keys, signal ``sleep_in``; safe to call from any thread."""
         with self._lock:
             had_any = bool(self._countdowns)
+            running = set(self._countdowns)  # only these keys change by the second; idle ones repaint on state changes
             due: list[str] = []
             for context, countdown in list(self._countdowns.items()):
                 overdue = countdown.overdue()
@@ -188,7 +186,7 @@ class Sleeper:
             for context in due[1:]:
                 _log.info("sleep countdown of %s fell due with another; dropped", context)
             self._firing.update(fire)
-            faces = list(self._faces.values())
+            faces = [face for context, face in self._faces.items() if context in running]
         for face in faces:
             self.paint(face)
         if had_any:
