@@ -11,7 +11,7 @@ permissions. See Decker's `docs/plugins/repositories.md`.
 
 ## Requirements and Font Awesome
 
-The plugins here use manifest format 3 and declare `"decker": ">=0.7"`, so they need Decker 0.7 or newer. The former
+The plugins here use manifest format 3 and declare `"decker": ">=0.7"` (Utilities: `">=0.7.2"`), so they need Decker 0.7 or newer (Utilities 0.7.2). The former
 Fontawesome plugin (`com.decker.fontawesome`) is retired: Font Awesome Free 7.3.1 is built into Decker 0.7 as the
 Built-In icon packs, referenced as `fab:<name>` (brands), `far:<name>` (regular) and `fas:<name>` (solid), for example
 `fas:play`. Existing `pack:com.decker.fontawesome.*` references need to be switched to those forms.
@@ -117,6 +117,6 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 [^8]: macOS controls the internal display only, and Lock needs the Accessibility permission for Decker's plugin
     process.
 
-Pages and Profiles use no OS APIs. No manifest declares `platforms` or `linux`, which means all
-platforms; the table above records what has been verified, not what the manifests restrict.
+Pages and Profiles use no OS APIs. Only the Utilities manifest declares `platforms` (all three: `linux`,
+`windows`, `macos`) and none declares `linux`, so no manifest restricts any platform; the table above records what has been verified, not what the manifests restrict.
 
