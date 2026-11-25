@@ -328,6 +328,38 @@ def test_cache_poll_picks_up_external_change_and_notifies_only_on_change() -> No
     assert_that([m.id for m in cache.monitors()]).is_equal_to(["fake:1", "fake:2"])
 
 
+def test_cache_poll_does_not_revert_a_change_written_during_the_read() -> None:
+    entered, gate = threading.Event(), threading.Event()
+
+    class SlowRead(FakeBackend):
+        def get(self, monitor_id: str) -> int:
+            value = super().get(monitor_id)
+            if not gate.is_set():
+                entered.set()
+                assert gate.wait(5)
+            return value  # the value as it was when the read began
+
+    backend = SlowRead({"fake:1": 50})
+    cache = BrightnessCache(backend)
+    gate.set()
+    cache.poll_once()
+    gate.clear()
+    entered.clear()
+    poll = threading.Thread(target=cache.poll_once)
+    poll.start()
+    assert entered.wait(5)
+
+    cache.change("fake:1", "set", 60)
+    gate.set()
+    poll.join(5)
+
+    assert_that(cache.level("fake:1")).is_equal_to(60)
+    assert_that(cache.change("fake:1", "increase", 10)).is_equal_to({"fake:1": 70})
+    backend.levels["fake:1"] = 20  # an external change: the next poll still refreshes the cache
+    cache.poll_once()
+    assert_that(cache.level("fake:1")).is_equal_to(20)
+
+
 def test_cache_poll_notices_a_vanished_monitor() -> None:
     backend = FakeBackend({"fake:1": 10, "fake:2": 30})
     changes: list[int] = []

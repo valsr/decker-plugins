@@ -300,6 +300,8 @@ class BrightnessCache:
         self._lock = threading.Lock()
         self._monitors: list[Monitor] = []
         self._levels: dict[str, int] = {}
+        self._seq = 0  # bumped per write; a poll that started before a monitor's write must not overwrite it
+        self._written: dict[str, int] = {}
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lifecycle = threading.Lock()  # start and stop are check-then-act on _thread
@@ -341,6 +343,8 @@ class BrightnessCache:
         except Exception as exc:
             _log.warning("brightness poll could not list monitors: %s", exc)
             return
+        with self._lock:
+            started = self._seq
         levels: dict[str, int] = {}
         for monitor in monitors:
             try:
@@ -348,6 +352,9 @@ class BrightnessCache:
             except Exception as exc:
                 _log.debug("brightness poll could not read %s: %s", monitor.id, exc)
         with self._lock:
+            for monitor_id, stamp in self._written.items():
+                if stamp > started and monitor_id in self._levels and monitor_id in levels:
+                    levels[monitor_id] = self._levels[monitor_id]
             changed = monitors != self._monitors or levels != self._levels
             self._monitors, self._levels = monitors, levels
         if changed:
@@ -378,6 +385,8 @@ class BrightnessCache:
         if applied:
             with self._lock:
                 self._levels.update(applied)
+                self._seq += 1
+                self._written.update(dict.fromkeys(applied, self._seq))
             self._notify()
         if failures:
             raise BrightnessError("; ".join(failures))
