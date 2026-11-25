@@ -17,8 +17,6 @@ from deck_brightness import _decks  # noqa: E402
 
 _ACTION = "com.decker.utilities.deck-brightness"
 _LEVEL = "com.decker.utilities.deck-brightness-level"
-_UP = "com.decker.utilities.deck-brightness-up"
-_DOWN = "com.decker.utilities.deck-brightness-down"
 _MANIFEST = PluginManifest.load(PLUGIN_DIR / "manifest.json")
 
 
@@ -282,19 +280,22 @@ def test_manifest_level_card_bindings_and_a_resolvable_catalogue_icon() -> None:
     )
 
 
-def test_manifest_up_and_down_cards() -> None:
-    assert_that(_bindings(_UP)).is_equal_to(
-        {"press": _args("increase", 10), "double_press": _args("increase", 5), "long_press": _args("set", 75)}
-    )
-    assert_that(_bindings(_DOWN)).is_equal_to(
-        {"press": _args("decrease", 10), "double_press": _args("decrease", 5), "long_press": _args("set", 25)}
-    )
+@pytest.mark.parametrize(
+    ("mode", "value", "expected"),
+    [
+        ("increase", 5, 75),
+        ("decrease", 5, 65),
+        ("increase", 10, 80),
+        ("decrease", 10, 60),
+        ("set", 75, 75),
+        ("set", 25, 25),
+    ],
+)
+def test_the_former_up_and_down_presets_move_the_deck(key: Harness, mode: str, value: int, expected: int) -> None:
+    result = _run(key, mode=mode, value=value)
 
-
-def test_manifest_static_cards_show_the_logo() -> None:
-    for card_id in (_UP, _DOWN):
-        assert_that(_card(card_id).static).is_true()
-        assert_that(_card(card_id).appearance["icon"]["ref"]).is_equal_to("decker:logo")
+    assert_that(result).contains_entry({"ok": True}, {"value": expected})
+    assert_that(key.deck_sets).is_equal_to([{"device": DEVICE, "percent": expected}])
 
 
 def test_manifest_action_is_global_with_mode_and_value() -> None:

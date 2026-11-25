@@ -17,8 +17,6 @@ from display_brightness import cache, set_backend_for_tests  # noqa: E402
 
 _ACTION = "com.decker.utilities.brightness"
 _LEVEL = "com.decker.utilities.brightness-level"
-_UP = "com.decker.utilities.brightness-up"
-_DOWN = "com.decker.utilities.brightness-down"
 _MANIFEST = PluginManifest.load(PLUGIN_DIR / "manifest.json")
 
 
@@ -390,23 +388,24 @@ def test_manifest_level_card_bindings_and_icon() -> None:
     )
 
 
-def test_manifest_up_and_down_cards_bind_all_monitors() -> None:
-    assert_that(_bindings(_UP)).is_equal_to(
-        {
-            "press": _args("increase", 10, "all"),
-            "double_press": _args("increase", 5, "all"),
-            "long_press": _args("set", 75, "all"),
-        }
-    )
-    assert_that(_bindings(_DOWN)).is_equal_to(
-        {
-            "press": _args("decrease", 10, "all"),
-            "double_press": _args("decrease", 5, "all"),
-            "long_press": _args("set", 25, "all"),
-        }
-    )
-    assert_that(_card(_UP).icon).is_equal_to("fas:sun")
-    assert_that(_card(_DOWN).icon).is_equal_to("fas:sun")
+@pytest.mark.parametrize(
+    ("mode", "value", "expected"),
+    [
+        ("increase", 10, (60, 80)),
+        ("increase", 5, (55, 75)),
+        ("decrease", 10, (40, 60)),
+        ("decrease", 5, (45, 65)),
+        ("set", 75, (75, 75)),
+        ("set", 25, (25, 25)),
+    ],
+)
+def test_the_former_up_and_down_presets_act_on_all_monitors(
+    key: Harness, backend: FakeBackend, mode: str, value: int, expected: tuple[int, int]
+) -> None:
+    result = _run(key, mode=mode, value=value, monitor="all")
+
+    assert_that(result).contains_entry({"ok": True})
+    assert_that(backend.levels).is_equal_to({"a": expected[0], "b": expected[1]})
 
 
 def test_manifest_level_card_monitor_setting_is_a_dynamic_choice_defaulting_to_all() -> None:

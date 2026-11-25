@@ -46,17 +46,16 @@ A published version is never changed: the same id and version must always be the
 
 `com.decker.utilities` (needs Decker 0.7.2 or newer) bundles utility cards and actions.
 
-Cards: Counter, Page, Profile, Brightness Level, Brightness Up, Brightness Down, Deck Brightness Level, Deck Brightness
-Up, Deck Brightness Down, Sleep, Timer and Stopwatch.
+Cards: Counter, Brightness Level, Deck Brightness Level, Sleep, Timer and Stopwatch. The Page, Profile and
+Brightness/Deck Brightness Up and Down functions are global actions only (Actions tab); bind them to a Blank card.
 
 - Brightness Level shows the display brightness (press up, double press down, long press set 75%); its `monitor`
-  setting picks the monitor. Up/Down are static keys: press steps by 10, double press by a small step of 5, long press
-  sets 75% (Up) or 25% (Down). The Deck variants control the Stream Deck's own brightness.
+  setting picks the monitor. The Deck variant controls the Stream Deck's own brightness.
 - Sleep: press sleeps now (or cancels a running countdown), double press sleeps in 1 minute, long press in 10.
 - Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
   double or long press resets.
-- Counter, Page and Profile cards offer the same functions as the standalone Counter and the Pages and Profiles actions.
-  Pages and Profiles (3.0.0) ship global actions only (`next`, `previous`, `goto`) and no cards.
+- The Counter card offers the same functions as the standalone Counter. Pages and Profiles (3.0.0) ship global
+  actions only (`next`, `previous`, `goto`) and no cards; so does the `page` and `profile` action here.
 
 Global actions: `brightness`, `deck-brightness`, `sleep`, `lock`, `page`, `profile` and `sleep-cancel` (cancels every
 running Sleep countdown; countdowns keep running when their key is removed or its page is left). Plugin-scoped actions
@@ -111,7 +110,7 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 [^4]: The Arch Linux container runs the same tests as an advisory check (`continue-on-error`, since a rolling release
     can break without a change here). It covers Arch, not the Plasma desktop or Wayland, and the maintainer has not
     yet used the plugins there, so the cell is ✅ on CI evidence alone.
-[^5]: Utilities bundles Counter, Page and Profile keys with brightness, sleep, lock, timer and stopwatch keys; see
+[^5]: Utilities bundles Counter, brightness, sleep, timer and stopwatch cards with lock, page and profile actions; see
     [Utilities](#utilities). Its tests run in CI, but the OS-facing parts (display brightness, sleep, lock) are not
     verified on real hardware on any OS yet.
 [^6]: Linux external monitors need `ddcutil`, the `i2c-dev` kernel module and membership of the `i2c` group (laptop

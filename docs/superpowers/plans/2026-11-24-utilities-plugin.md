@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A first-party Utilities plugin with Sleep, Lock screen, Brightness and Deck brightness actions; Brightness/Deck Brightness Level/Up/Down, Sleep, Timer, Stopwatch, Counter, Page and Profile cards; and brightness/sleep variables.
+**Goal:** A first-party Utilities plugin with Sleep, Lock screen, Brightness and Deck brightness actions; Brightness/Deck Brightness Level, Sleep, Timer, Stopwatch and Counter cards; and brightness/sleep variables. The Page, Profile and Brightness/Deck Brightness Up/Down presets are not cards: their actions stay global and are reached from the Actions tab.
 
 **Architecture:** One plugin folder. `plugin.py` holds the SDK registrations (cards, actions, variables, options) and stays thin; logic lives in sibling modules: `brightness.py` (backend interface + per-platform backends + cache/poller), `power.py` (sleep/lock per platform), `timers.py` (pure timer/stopwatch/countdown state machines), `drawing.py` (Pillow painting: tinted icons, time text, arc/bar progress, colour modes). Per-key state is held in card instances (context id) inside the long-running process (the plugin declares variables).
 
@@ -53,7 +53,7 @@
 
 ---
 
-### Task 2: Page and Profile
+### Task 2: Page and Profile actions
 
 **Files:**
 - Modify: `manifest.json`, `plugin.py`
@@ -61,15 +61,15 @@
 
 **Interfaces:**
 - Consumes: SDK `ActionCallContext.device_id`, `ctx.switch_page/go_to_page/switch_profile/go_to_profile` (Decker plan Task 3); card-context versions on `ctx.card`.
-- Produces: global actions `com.decker.utilities.page` {`mode` choice `page|next|previous` default `next`; `profile` profile; `page` page with `profile_field: "profile"`; `wrap` bool default false} and `com.decker.utilities.profile` {`mode` `profile|next|previous` default `next`; `profile` profile; `wrap` bool}. Cards `com.decker.utilities.page` (icon `fas:file`, default press = page next) and `com.decker.utilities.profile` (icon `fas:layer-group`, default press = profile next), each with `color` setting (default `#ffffff`, alpha).
+- Produces: global actions `com.decker.utilities.page` {`mode` choice `page|next|previous` default `next`; `profile` profile; `page` page with `profile_field: "profile"`; `wrap` bool default false} and `com.decker.utilities.profile` {`mode` `profile|next|previous` default `next`; `profile` profile; `wrap` bool}.  There are no Page or Profile cards (a Blank card plus the action does the same); the actions are reached from the Actions tab.
 
-Behaviour: with a card in the call, navigate through it; else through `ctx` (device-scoped); neither → `ActionError("no device for this call")`. Mode `page` with an unset/deleted page (`profile_id == -1`) → `ActionError("the chosen page no longer exists")`. Card face: press binding mode `page` → the target page name; `profile` → the target profile's icon (reuse today's Profiles goto drawing); next/previous → a right/left caret in `color`.
+Behaviour: with a card in the call, navigate through it; else through `ctx` (device-scoped); neither → `ActionError("no device for this call")`. Mode `page` with an unset/deleted page (`profile_id == -1`) → `ActionError("the chosen page no longer exists")`.
 
-- [ ] **Step 1: Write failing tests** — each mode sends the right message (`switch_page {"to","wrap"}` / `{"page_id"}` / `switch_profile {"profile_id"}`) through the card when present and context-less with `device` when not; deleted page error; faces for page/profile/next modes (compare against today's Pages/Profiles test helpers).
+- [ ] **Step 1: Write failing tests** — each mode sends the right message (`switch_page {"to","wrap"}` / `{"page_id"}` / `switch_profile {"profile_id"}`) through the card when present and context-less with `device` when not; deleted page error.
 - [ ] **Step 2: Run, expect FAIL.**
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run, expect PASS.**
-- [ ] **Step 5: Commit** — `git commit -m "feat(utilities): Page and Profile cards"`
+- [ ] **Step 5: Commit** — `git commit -m "feat(utilities): Page and Profile actions"`
 
 ---
 
@@ -131,7 +131,7 @@ class BrightnessCache:
 
 **Interfaces:**
 - Consumes: Task 3 `BrightnessCache`, `default_backend`, `label_monitors`.
-- Produces: `drawing.level_grey(percent: int) -> str` (`#rrggbb`), `drawing.draw_icon(img, icon_png: bytes, color: str) -> None`, `drawing.draw_caption(img, text: str) -> None`. Global action `com.decker.utilities.brightness` {`mode` choice increase/decrease/set default increase; `value` int 0–100 default 10; `monitor` choice `options_source: "monitors"` default `"all"`}, returns the new level (first changed monitor's). `@options("monitors")` → `[{"label": "All monitors", "value": "all"}, *labelled monitors]`. Cards `brightness_level` (icon `fas:sun`, tinted by `monitor` card setting's level, "all" = average, caption `NN%`, `—` when unknown; bindings +10 / −10 / set 75), `brightness_up` (+10 / +5 / set 75), `brightness_down` (−10 / −5 / set 25); Up/Down use `monitor: "all"`. Variables `brightness_level` (first monitor) and pattern `brightness_level_{monitor}` (1-based index), registered/unregistered as the monitor list changes.
+- Produces: `drawing.level_grey(percent: int) -> str` (`#rrggbb`), `drawing.draw_icon(img, icon_png: bytes, color: str) -> None`, `drawing.draw_caption(img, text: str) -> None`. Global action `com.decker.utilities.brightness` {`mode` choice increase/decrease/set default increase; `value` int 0–100 default 10; `monitor` choice `options_source: "monitors"` default `"all"`}, returns the new level (first changed monitor's). `@options("monitors")` → `[{"label": "All monitors", "value": "all"}, *labelled monitors]`. Card `brightness_level` (icon `fas:sun`, tinted by `monitor` card setting's level, "all" = average, caption `NN%`, `—` when unknown; bindings +10 / −10 / set 75); no Up/Down cards (the `brightness` action with `monitor: "all"` is reached from the Actions tab). Variables `brightness_level` (first monitor) and pattern `brightness_level_{monitor}` (1-based index), registered/unregistered as the monitor list changes.
 
 - [ ] **Step 1: Write failing tests** — `level_grey(100) == "#ffffff"`, `level_grey(0) == "#000000"`, `level_grey(50) == "#808080"`; action modes and clamping through a fake backend injected via a module-level `set_backend_for_tests(backend)` hook; options list; unknown monitor id → ActionError "monitor not available"; no monitors → ActionError "no monitor found" and Level card caption `—`; Level card repaints when the cache's `on_change` fires; variable values and per-monitor registration; manifest default bindings exactly as listed.
 - [ ] **Step 2: Run, expect FAIL.**
@@ -147,7 +147,7 @@ class BrightnessCache:
 
 **Interfaces:**
 - Consumes: SDK `get_deck_brightness`, `set_deck_brightness`, `on_deck_brightness_changed`, `connected_devices`, `on_device_connected/disconnected` (Decker plan Tasks 4–5).
-- Produces: global action `com.decker.utilities.deck_brightness` {`mode`, `value` as in Task 4}, device = card's `device` or `ctx.device_id`; none → `ActionError("no deck for this call")` and nothing sent; returns the computed new level. Cards `deck_brightness_level` (icon `decker:logo` tinted by the key's deck level, caption `NN%`; +10 / −10 / set 75), `deck_brightness_up` (+10 / +5 / set 75), `deck_brightness_down` (−10 / −5 / set 25). Variables `deck_brightness_level` (first of `connected_devices()`) and pattern `deck_brightness_level_{device}`.
+- Produces: global action `com.decker.utilities.deck_brightness` {`mode`, `value` as in Task 4}, device = card's `device` or `ctx.device_id`; none → `ActionError("no deck for this call")` and nothing sent; returns the computed new level. Card `deck_brightness_level` (icon `decker:logo` tinted by the key's deck level, caption `NN%`; +10 / −10 / set 75); no Up/Down cards (the `deck_brightness` action is reached from the Actions tab). Variables `deck_brightness_level` (first of `connected_devices()`) and pattern `deck_brightness_level_{device}`.
 
 - [ ] **Step 1: Write failing tests** with the harness answering `get_deck_brightness` and asserting `set_deck_brightness` payloads: increase from 70 → sends 80; decrease from 5 by 10 → sends 0 (server clamps); set 75; no device → error, no message; `deck_brightness_changed` repaints Level cards on that device only and updates both variables; `device_disconnected` unregisters its variable and moves "first".
 - [ ] **Step 2: Run, expect FAIL.** - [ ] **Step 3: Implement.** - [ ] **Step 4: Run, expect PASS.**

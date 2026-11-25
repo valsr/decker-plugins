@@ -49,3 +49,25 @@ def test_every_icon_path_exists():
 
     for icon in icons - {None}:
         assert_that(read_icon(_DIR, icon)).described_as(icon).is_not_none()
+
+
+def test_only_the_stateful_cards_are_shipped() -> None:
+    kept = {"counter", "brightness-level", "deck-brightness-level", "sleep", "timer", "stopwatch"}
+
+    assert_that({c.id for c in _MANIFEST.cards}).is_equal_to({f"com.decker.utilities.{k}" for k in kept})
+
+
+def test_every_action_the_kept_cards_bind_still_exists() -> None:
+    action_ids = {a.id for a in _MANIFEST.actions}
+    bound = {
+        b.action for c in _MANIFEST.cards for b in c.bindings.values() if b.action.startswith("com.decker.utilities.")
+    }
+
+    assert_that(bound).is_not_empty()
+    assert_that(action_ids).contains(*bound)
+    assert_that(action_ids).contains(
+        "com.decker.utilities.page",
+        "com.decker.utilities.profile",
+        "com.decker.utilities.brightness",
+        "com.decker.utilities.deck-brightness",
+    )
