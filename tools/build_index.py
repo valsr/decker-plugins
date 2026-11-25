@@ -11,6 +11,7 @@ from typing import Any
 from tools.versioning import parse_plugin_version
 
 INDEX_NAME = "Decker Plugins"
+ICON_COLOR = "#808080"  # Font Awesome glyphs are currentColor (black); mid-grey reads on light and dark themes
 ICON_SIZE = 256  # px; the rendered size of an SVG manifest icon
 
 
@@ -40,6 +41,12 @@ def _write_icon(source: Path, destination: Path, plugin_id: str) -> bool:
     return True
 
 
+def _is_builtin_ref(icon_ref: Any) -> bool:
+    from decker.common.icon_ref import parse_builtin_ref  # noqa: PLC0415
+
+    return parse_builtin_ref(icon_ref) is not None
+
+
 def _write_builtin_icon(ref: str, destination: Path, plugin_id: str) -> bool:
     """Write the Font Awesome icon a `fas:`/`far:`/`fab:` ref names as a PNG at ICON_SIZE."""
     try:
@@ -47,7 +54,7 @@ def _write_builtin_icon(ref: str, destination: Path, plugin_id: str) -> bool:
         from decker.asset.renderer import AssetRenderer  # noqa: PLC0415
 
         data = read_builtin_ref(ref)
-        image = AssetRenderer().render_bytes(data, ICON_SIZE, ICON_SIZE) if data else None
+        image = AssetRenderer().render_bytes(data, ICON_SIZE, ICON_SIZE, ICON_COLOR) if data else None
         if image is None:
             raise ValueError(f"unknown built-in icon {ref}")
         image.save(destination, format="PNG")
@@ -61,7 +68,7 @@ def _write_builtin_icon(ref: str, destination: Path, plugin_id: str) -> bool:
 def _write_plugin_icon(folder: Path, icon_ref: Any, out_dir: Path, plugin_id: str) -> bool:
     """Write `icons/<plugin_id>.png` from a plugin file or a built-in `fas:`-style ref; False if there is none."""
     icon = _icon_source(folder, icon_ref)
-    if icon is None and not (isinstance(icon_ref, str) and ":" in icon_ref):
+    if icon is None and not (_is_builtin_ref(icon_ref)):
         return False
     (out_dir / "icons").mkdir(exist_ok=True)
     target = out_dir / "icons" / f"{plugin_id}.png"
