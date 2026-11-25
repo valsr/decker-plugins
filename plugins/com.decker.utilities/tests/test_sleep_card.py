@@ -2,6 +2,7 @@
 
 import sys
 import threading
+import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import ModuleType
@@ -28,17 +29,13 @@ _WAIT = 5
 
 
 class FakeClock:
-    """A monotonic clock (``now``) plus a sleep-inclusive one (``wall``): ``slept`` only moves the latter."""
+    """A sleep-inclusive clock: a system sleep is just time passing on it."""
 
     def __init__(self) -> None:
         self.now = 1000.0
-        self.slept = 0.0
 
     def __call__(self) -> float:
         return self.now
-
-    def wall(self) -> float:
-        return self.now + self.slept
 
 
 class FakeCtx:
@@ -90,7 +87,7 @@ def suspends_fixture() -> Suspends:
 
 @pytest.fixture(name="sleeper")
 def sleeper_fixture(clock: FakeClock, suspends: Suspends) -> Iterator[Sleeper]:
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspends, interval=3600)
+    sleeper = Sleeper(clock=clock, suspender=suspends, interval=3600)
     yield sleeper
     sleeper.stop()
 
@@ -98,13 +95,31 @@ def sleeper_fixture(clock: FakeClock, suspends: Suspends) -> Iterator[Sleeper]:
 # --- Countdown and fmt_ms ---
 
 
-def test_countdown_lateness_is_measured_on_the_wall_clock(clock: FakeClock) -> None:
-    countdown = Countdown(60, clock, clock.wall)
+def test_countdown_overdue_is_the_time_past_the_deadline(clock: FakeClock) -> None:
+    countdown = Countdown(60, clock)
 
     clock.now += 60
     assert_that(countdown.overdue()).is_equal_to(0)
-    clock.slept += 500  # the machine slept: only the wall clock saw it
+    clock.now += 500
     assert_that(countdown.overdue()).is_equal_to(500)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the default clock is time.monotonic on Windows")
+def test_the_default_clock_keeps_counting_through_a_system_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    boot = [5000.0]  # stands in for CLOCK_BOOTTIME / CLOCK_MONOTONIC; the real monotonic clock is not moved at all
+    monkeypatch.setattr(time, "clock_gettime", lambda _clock_id: boot[0])
+    countdown = Countdown(600)
+    sleeper = Sleeper(suspender=Suspends(), interval=3600)
+    sleeper.start("k1", 600)
+
+    boot[0] += 180  # three minutes in
+    boot[0] += 120  # the lid is closed for two minutes
+    sleeper.tick()
+
+    assert_that(countdown.remaining()).is_close_to(300, 0.001)
+    assert_that(countdown.expired()).is_false()
+    assert_that(sleeper.remaining("k1")).is_close_to(300, 0.001)
+    assert_that(sleeper.running("k1")).is_true()
 
 
 def test_countdown_counts_down_on_its_clock_and_expires_at_zero(clock: FakeClock) -> None:
@@ -161,7 +176,7 @@ def test_after_restarts_a_running_countdown_with_the_new_length(sleeper: Sleeper
 
 
 def test_a_failed_suspend_on_press_raises_the_power_error(clock: FakeClock) -> None:
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=Suspends(PowerError("no logind")), interval=3600)
+    sleeper = Sleeper(clock=clock, suspender=Suspends(PowerError("no logind")), interval=3600)
 
     with pytest.raises(PowerError, match="no logind"):
         sleeper.press("k1")
@@ -225,7 +240,7 @@ def test_the_registry_lock_is_not_held_while_suspending(clock: FakeClock) -> Non
         held.append(sleeper.lock_held())
         sleeper.start("other", 5)  # would deadlock on a held lock
 
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspender, interval=3600)
+    sleeper = Sleeper(clock=clock, suspender=suspender, interval=3600)
     sleeper.start("k1", 1)
     clock.now += 1
     sleeper.tick()
@@ -247,7 +262,7 @@ def test_a_countdown_found_long_overdue_is_dropped_never_fired_late(
 
 def test_a_failed_suspend_alerts_the_live_key_and_clears_state(clock: FakeClock) -> None:
     suspends = Suspends(PowerError("refused"))
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspends, interval=3600)
+    sleeper = Sleeper(clock=clock, suspender=suspends, interval=3600)
     ctx = FakeCtx()
     sleeper.track(ctx)  # type: ignore[arg-type]
     sleeper.start("k1", 1)
@@ -262,7 +277,7 @@ def test_a_failed_suspend_alerts_the_live_key_and_clears_state(clock: FakeClock)
 def test_a_failed_suspend_of_a_key_that_is_gone_is_only_logged(
     clock: FakeClock, caplog: pytest.LogCaptureFixture
 ) -> None:
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=Suspends(PowerError("refused")), interval=3600)
+    sleeper = Sleeper(clock=clock, suspender=Suspends(PowerError("refused")), interval=3600)
     sleeper.start("k1", 1)
     clock.now += 1
 
@@ -274,12 +289,26 @@ def test_a_failed_suspend_of_a_key_that_is_gone_is_only_logged(
 # --- system sleep, one suspend per tick ---
 
 
+def test_a_short_system_sleep_inside_a_countdown_still_fires_on_time(
+    sleeper: Sleeper, clock: FakeClock, suspends: Suspends
+) -> None:
+    sleeper.start("k1", 600)
+    clock.now += 180
+    clock.now += 120  # the lid is closed for two minutes
+    sleeper.tick()
+
+    assert_that(sleeper.remaining("k1")).is_equal_to(300)
+    assert_that(suspends.count).is_equal_to(0)
+    clock.now += 300
+    sleeper.tick()
+    assert_that(suspends.count).is_equal_to(1)
+
+
 def test_a_countdown_whose_machine_slept_through_its_deadline_is_dropped_not_fired(
     sleeper: Sleeper, clock: FakeClock, suspends: Suspends
 ) -> None:
     sleeper.start("k1", 60)
-    clock.slept += 8 * 3600  # suspended overnight: the monotonic clock did not move
-    clock.now += 60
+    clock.now += 8 * 3600 + 60  # suspended overnight
 
     sleeper.tick()
 
@@ -294,8 +323,7 @@ def test_a_countdown_still_running_after_a_system_sleep_is_dropped_at_the_next_t
     sleeper.start("b", 600)
     clock.now += 60
     sleeper.tick()  # a fires, the machine sleeps
-    clock.slept += 8 * 3600
-    clock.now += 1
+    clock.now += 8 * 3600 + 1  # suspended overnight
 
     sleeper.tick()
 
@@ -364,6 +392,19 @@ def test_a_tick_repaints_live_keys_with_the_remaining_time(sleeper: Sleeper, clo
     clock.now += 30
     sleeper.tick()
     assert_that(ctx.titles[-1]).is_equal_to("1:00")
+
+
+def test_a_tick_does_not_repaint_idle_keys(sleeper: Sleeper) -> None:
+    idle, running = FakeCtx("idle"), FakeCtx("k1")
+    sleeper.track(idle)  # type: ignore[arg-type]
+    sleeper.track(running)  # type: ignore[arg-type]
+    sleeper.start("k1", 90)
+    painted = (len(idle.titles), len(running.titles))
+
+    sleeper.tick()
+
+    assert_that(len(idle.titles)).is_equal_to(painted[0])
+    assert_that(len(running.titles)).is_equal_to(painted[1] + 1)
 
 
 def test_a_countdown_survives_the_key_disappearing_and_the_return_shows_the_remaining_time(
@@ -440,7 +481,7 @@ def test_soonest_text_is_the_soonest_running_countdown(sleeper: Sleeper, clock: 
 
 
 def test_the_ticker_expires_countdowns_on_its_own(clock: FakeClock, suspends: Suspends) -> None:
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspends, interval=0.01)
+    sleeper = Sleeper(clock=clock, suspender=suspends, interval=0.01)
     sleeper.start("k1", 5)
     clock.now += 5
     sleeper.start_ticker()
@@ -478,7 +519,7 @@ def test_stop_from_the_ticker_thread_does_not_join_itself(clock: FakeClock) -> N
             errors.append(exc)
         done.set()
 
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=suspender, interval=0.01)
+    sleeper = Sleeper(clock=clock, suspender=suspender, interval=0.01)
     holder.append(sleeper)
     sleeper.start("k1", 1)
     clock.now += 1
@@ -502,7 +543,7 @@ def test_a_stop_during_start_waits_for_the_thread_to_be_running(
                 stopping.wait(_WAIT)  # a window in which stop() could see the thread before it was started
             super().start()
 
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=Suspends(), interval=0.05)
+    sleeper = Sleeper(clock=clock, suspender=Suspends(), interval=0.05)
 
     def stopper() -> None:
         assert published.wait(_WAIT)
@@ -533,7 +574,7 @@ def plugin_fixture() -> ModuleType:
 
 @pytest.fixture(name="loop_clock")
 def loop_clock_fixture(monkeypatch: pytest.MonkeyPatch, clock: FakeClock) -> Iterator[FakeClock]:
-    sleeper = Sleeper(clock=clock, wall_clock=clock.wall, suspender=lambda: power.suspend(), interval=3600)
+    sleeper = Sleeper(clock=clock, suspender=lambda: power.suspend(), interval=3600)
     monkeypatch.setattr(sleep_card, "_sleeper", sleeper)
     yield clock
     sleeper.stop()
