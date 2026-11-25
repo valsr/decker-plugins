@@ -84,7 +84,7 @@ Caveats:
 On every push to `main`, `publish.yml` packs all plugins; for each version without a release it creates the release
 `<id>-v<version>` with the `.deckerplugin` and its `<package>.json` sidecar (the index version entry plus the plugin
 `id`). Existing releases are never edited. It then downloads every release's sidecar, builds `index.json` and
-`icons/<id>.png` (for file icons; a built-in `fas:` ref is written into the index as is) with
+`icons/<id>.png` (for file icons; a built-in `fas:`/`far:`/`fab:` ref is written into the index as is) with
 `python -m tools.build_index` and deploys them to GitHub Pages. Enable Pages with the "GitHub Actions"
 source in the repository settings.
 

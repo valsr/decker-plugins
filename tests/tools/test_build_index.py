@@ -25,14 +25,16 @@ def test_build_index_parses_with_decker(tmp_path: Path) -> None:
     index_path = build_index([entry], PLUGINS, tmp_path / "site")
 
     parsed = parse_index(index_path.read_bytes(), "https://example.com/index.json")
+    data = json.loads(index_path.read_text(encoding="utf-8"))
     assert_that(parsed.plugins).is_length(1)
     plugin = parsed.plugins[0]
     assert_that(plugin.id).is_equal_to("com.decker.counter")
     assert_that(plugin.name).is_equal_to("Counter")
-    assert_that(json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["icon"]).is_equal_to("fas:calculator")
+    assert_that(data["plugins"][0]["icon"]).is_equal_to("fas:calculator")
+    assert_that(plugin.icon_url).is_none()
     assert_that(plugin.versions[0].sha256).is_equal_to(entry["sha256"])
     assert_that((tmp_path / "site" / "icons" / "com.decker.counter.png").exists()).is_false()
-    assert_that(json.loads(index_path.read_text(encoding="utf-8"))["format"]).is_equal_to(1)
+    assert_that(data["format"]).is_equal_to(1)
 
 
 def test_build_index_keeps_older_versions(tmp_path: Path) -> None:
