@@ -11,8 +11,8 @@ permissions. See Decker's `docs/plugins/repositories.md`.
 
 ## Requirements and Font Awesome
 
-The plugins here use manifest format 3 and declare `"decker": ">=0.7"`; Pages and Profiles declare `">=0.8"`
-because they contribute presets (see below). Counter (2.0.1) and Utilities (2.1.1) declare `">=0.8.1"`: their cards list
+The plugins here use manifest format 3; Pages and Profiles declare `"decker": ">=0.8"` because they contribute
+presets (see below). Counter (2.0.1) and Utilities (2.1.1) declare `">=0.8.1"`: their cards list
 their own actions in `cards[].actions`, which Decker 0.8.1 introduced. The former Fontawesome plugin (`com.decker.fontawesome`) is retired: Font
 Awesome Free 7.3.1 is built into Decker 0.7 as the Built-In icon packs, referenced as `fab:<name>` (brands),
 `far:<name>` (regular) and `fas:<name>` (solid), for example `fas:play`. Existing `pack:com.decker.fontawesome.*`
