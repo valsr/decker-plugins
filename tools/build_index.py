@@ -11,7 +11,6 @@ from typing import Any
 from tools.versioning import parse_plugin_version
 
 INDEX_NAME = "Decker Plugins"
-ICON_COLOR = "#808080"  # Font Awesome glyphs are currentColor (black); mid-grey reads on light and dark themes
 ICON_SIZE = 256  # px; the rendered size of an SVG manifest icon
 
 
@@ -47,34 +46,15 @@ def _is_builtin_ref(icon_ref: Any) -> bool:
     return parse_builtin_ref(icon_ref) is not None
 
 
-def _write_builtin_icon(ref: str, destination: Path, plugin_id: str) -> bool:
-    """Write the Font Awesome icon a `fas:`/`far:`/`fab:` ref names as a PNG at ICON_SIZE."""
-    try:
-        from decker.asset.builtinicons import read_builtin_ref  # noqa: PLC0415
-        from decker.asset.renderer import AssetRenderer  # noqa: PLC0415
-
-        data = read_builtin_ref(ref)
-        image = AssetRenderer().render_bytes(data, ICON_SIZE, ICON_SIZE, ICON_COLOR) if data else None
-        if image is None:
-            raise ValueError(f"unknown built-in icon {ref}")
-        image.save(destination, format="PNG")
-    except Exception as exc:  # noqa: BLE001  (a broken icon must not stop the index being built)
-        print(f"warning: skipping the icon of {plugin_id}: {exc}", file=sys.stderr)
-        destination.unlink(missing_ok=True)
-        return False
-    return True
-
-
-def _write_plugin_icon(folder: Path, icon_ref: Any, out_dir: Path, plugin_id: str) -> bool:
-    """Write `icons/<plugin_id>.png` from a plugin file or a built-in `fas:`-style ref; False if there is none."""
+def _write_plugin_icon(folder: Path, icon_ref: Any, out_dir: Path, plugin_id: str) -> str | None:
+    """Return the plugin's index `icon`: a PNG written under `icons/` for a file, a built-in ref verbatim, or None."""
     icon = _icon_source(folder, icon_ref)
-    if icon is None and not (_is_builtin_ref(icon_ref)):
-        return False
+    if icon is None:
+        return icon_ref if _is_builtin_ref(icon_ref) else None
     (out_dir / "icons").mkdir(exist_ok=True)
-    target = out_dir / "icons" / f"{plugin_id}.png"
-    if icon is not None:
-        return _write_icon(icon, target, plugin_id)
-    return _write_builtin_icon(icon_ref, target, plugin_id)
+    if not _write_icon(icon, out_dir / "icons" / f"{plugin_id}.png", plugin_id):
+        return None
+    return f"icons/{plugin_id}.png"
 
 
 def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path, generated: str | None = None) -> Path:
@@ -106,8 +86,9 @@ def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path,
         for key in ("author", "description", "category", "homepage"):
             if manifest.get(key):
                 plugin[key] = manifest[key]
-        if _write_plugin_icon(folder, manifest.get("icon"), out_dir, plugin_id):
-            plugin["icon"] = f"icons/{plugin_id}.png"
+        icon = _write_plugin_icon(folder, manifest.get("icon"), out_dir, plugin_id)
+        if icon:
+            plugin["icon"] = icon
         plugin["versions"] = sorted(grouped[plugin_id], key=lambda v: parse_plugin_version(v["version"]), reverse=True)
         plugins.append(plugin)
 

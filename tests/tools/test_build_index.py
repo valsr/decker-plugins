@@ -29,9 +29,9 @@ def test_build_index_parses_with_decker(tmp_path: Path) -> None:
     plugin = parsed.plugins[0]
     assert_that(plugin.id).is_equal_to("com.decker.counter")
     assert_that(plugin.name).is_equal_to("Counter")
-    assert_that(plugin.icon_url).is_equal_to("https://example.com/icons/com.decker.counter.png")
+    assert_that(json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["icon"]).is_equal_to("fas:calculator")
     assert_that(plugin.versions[0].sha256).is_equal_to(entry["sha256"])
-    assert_that((tmp_path / "site" / "icons" / "com.decker.counter.png").is_file()).is_true()
+    assert_that((tmp_path / "site" / "icons" / "com.decker.counter.png").exists()).is_false()
     assert_that(json.loads(index_path.read_text(encoding="utf-8"))["format"]).is_equal_to(1)
 
 
@@ -136,28 +136,23 @@ def test_png_manifest_icon_is_copied_unchanged(tmp_path: Path) -> None:
     assert_that((tmp_path / "site" / "icons" / "com.example.demo.png").read_bytes()).is_equal_to(source)
 
 
-def test_font_awesome_manifest_icon_is_rendered_to_png(tmp_path: Path) -> None:
+def test_font_awesome_manifest_icon_is_written_as_a_ref(tmp_path: Path) -> None:
     plugins, entry = _icon_plugin(tmp_path, "fas:toolbox", {})
 
     index_path = build_index([entry], plugins, tmp_path / "site")
 
-    image = _built_icon(tmp_path / "site").convert("RGBA")
-    assert_that(image.size).is_equal_to((256, 256))
-    glyph = [px for px in image.getdata() if px[3] == 255]
-    assert_that(glyph).is_not_empty()
-    assert_that(set(glyph)).is_equal_to({(128, 128, 128, 255)})
     plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
-    assert_that(plugin["icon"]).is_equal_to("icons/com.example.demo.png")
+    assert_that(plugin["icon"]).is_equal_to("fas:toolbox")
+    assert_that((tmp_path / "site" / "icons" / "com.example.demo.png").exists()).is_false()
 
 
-def test_unknown_font_awesome_icon_is_skipped_with_warning(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
+def test_unknown_font_awesome_ref_is_still_written(tmp_path: Path) -> None:
     plugins, entry = _icon_plugin(tmp_path, "fas:no-such-icon", {})
 
     index_path = build_index([entry], plugins, tmp_path / "site")
 
     plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
-    assert_that(plugin).does_not_contain_key("icon")
-    assert_that(capsys.readouterr().err).contains("no-such-icon")
+    assert_that(plugin["icon"]).is_equal_to("fas:no-such-icon")
 
 
 def test_unrenderable_svg_is_skipped_with_warning(tmp_path: Path, capsys) -> None:  # type: ignore[no-untyped-def]
