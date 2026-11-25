@@ -117,7 +117,7 @@
         "id": "com.decker.utilities.deck-brightness-level",
         "name": "Deck Brightness Level",
         "tooltip": "Shows the Stream Deck's brightness; press to raise it, double press to lower it, long press to set it to 75%",
-        "icon": "fas:toolbox",
+        "icon": "fas:tv",
         "appearance": {
           "background": "#000000"
         },
@@ -485,7 +485,7 @@
         "id": "com.decker.utilities.deck-brightness",
         "name": "Deck Brightness",
         "tooltip": "Raise, lower or set the Stream Deck's own brightness",
-        "icon": "fas:toolbox",
+        "icon": "fas:tv",
         "scope": "global",
         "returns": "The brightness level sent, 0-100 (the server clamps it to 1-100)",
         "settings": [

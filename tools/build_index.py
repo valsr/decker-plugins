@@ -58,6 +58,18 @@ def _write_builtin_icon(ref: str, destination: Path, plugin_id: str) -> bool:
     return True
 
 
+def _write_plugin_icon(folder: Path, icon_ref: Any, out_dir: Path, plugin_id: str) -> bool:
+    """Write `icons/<plugin_id>.png` from a plugin file or a built-in `fas:`-style ref; False if there is none."""
+    icon = _icon_source(folder, icon_ref)
+    if icon is None and not (isinstance(icon_ref, str) and ":" in icon_ref):
+        return False
+    (out_dir / "icons").mkdir(exist_ok=True)
+    target = out_dir / "icons" / f"{plugin_id}.png"
+    if icon is not None:
+        return _write_icon(icon, target, plugin_id)
+    return _write_builtin_icon(icon_ref, target, plugin_id)
+
+
 def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path, generated: str | None = None) -> Path:
     """Group sidecar entries (each carrying its plugin `id`) by plugin and write `out_dir/index.json`.
 
@@ -87,19 +99,8 @@ def build_index(entries: list[dict[str, Any]], plugins_dir: Path, out_dir: Path,
         for key in ("author", "description", "category", "homepage"):
             if manifest.get(key):
                 plugin[key] = manifest[key]
-        icon_ref = manifest.get("icon")
-        icon = _icon_source(folder, icon_ref)
-        builtin = isinstance(icon_ref, str) and icon_ref[:4] in ("fas:", "far:", "fab:")
-        if icon is not None or builtin:
-            (out_dir / "icons").mkdir(exist_ok=True)
-            target = out_dir / "icons" / f"{plugin_id}.png"
-            written = (
-                _write_icon(icon, target, plugin_id)
-                if icon is not None
-                else _write_builtin_icon(icon_ref, target, plugin_id)
-            )
-            if written:
-                plugin["icon"] = f"icons/{plugin_id}.png"
+        if _write_plugin_icon(folder, manifest.get("icon"), out_dir, plugin_id):
+            plugin["icon"] = f"icons/{plugin_id}.png"
         plugin["versions"] = sorted(grouped[plugin_id], key=lambda v: parse_plugin_version(v["version"]), reverse=True)
         plugins.append(plugin)
 
