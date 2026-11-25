@@ -483,6 +483,26 @@
             "action": "com.decker.utilities.timer-reset"
           }
         }
+      },
+      {
+        "id": "com.decker.utilities.stopwatch",
+        "name": "Stopwatch",
+        "tooltip": "A stopwatch: press to start or pause it, double or long press to reset it",
+        "icon": "fas:stopwatch",
+        "appearance": {
+          "background": "#000000"
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.stopwatch-toggle"
+          },
+          "double_press": {
+            "action": "com.decker.utilities.stopwatch-reset"
+          },
+          "long_press": {
+            "action": "com.decker.utilities.stopwatch-reset"
+          }
+        }
       }
     ],
     "actions": [
@@ -765,6 +785,22 @@
         "id": "com.decker.utilities.timer-reset",
         "name": "Timer reset",
         "tooltip": "Stops this Timer card and shows its full duration again",
+        "icon": "fas:rotate-left",
+        "scope": "plugin",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.stopwatch-toggle",
+        "name": "Stopwatch start or pause",
+        "tooltip": "Starts this Stopwatch card, or pauses it while it runs",
+        "icon": "fas:stopwatch",
+        "scope": "plugin",
+        "settings": []
+      },
+      {
+        "id": "com.decker.utilities.stopwatch-reset",
+        "name": "Stopwatch reset",
+        "tooltip": "Stops this Stopwatch card and sets it back to 0:00",
         "icon": "fas:rotate-left",
         "scope": "plugin",
         "settings": []

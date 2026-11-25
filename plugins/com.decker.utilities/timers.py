@@ -112,6 +112,33 @@ class Timer:
         return self._elapsed
 
 
+class Stopwatch:
+    """Counts up while running, on one clock that keeps counting through a system sleep (like ``Timer``)."""
+
+    def __init__(self, clock: Callable[[], float] = sleep_inclusive_clock) -> None:
+        self._clock = clock
+        self.running = False
+        self._started = 0.0
+        self._elapsed = 0.0  # run time of the finished stretches (before the last pause)
+
+    def toggle(self) -> None:
+        """Start or resume a stopped stopwatch, pause a running one."""
+        if self.running:
+            self._elapsed = self.elapsed()
+            self.running = False
+        else:
+            self._started = self._clock()
+            self.running = True
+
+    def reset(self) -> None:
+        self.running = False
+        self._elapsed = 0.0
+
+    def elapsed(self) -> float:
+        """Seconds run so far."""
+        return self._elapsed + self._clock() - self._started if self.running else self._elapsed
+
+
 def fmt_ms(seconds: float) -> str:
     """``m:ss``, or ``h:mm:ss`` from one hour; whole seconds, negative counts as 0."""
     total = max(0, int(seconds))
