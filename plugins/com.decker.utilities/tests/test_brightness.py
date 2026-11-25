@@ -197,6 +197,7 @@ def test_mac_internal_converts_float_scale() -> None:
         backend.get("mac:other")
 
 
+@pytest.mark.skipif(sys.platform == "darwin", reason="on macOS the built-in display lists itself")
 def test_mac_internal_without_api_lists_nothing_off_darwin() -> None:
     assert_that(MacInternal().list_monitors()).is_empty()
 

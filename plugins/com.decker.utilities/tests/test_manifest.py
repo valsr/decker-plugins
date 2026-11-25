@@ -13,7 +13,7 @@ _MANIFEST = PluginManifest.load(_DIR / "manifest.json")
 def test_identity_and_version_constraints():
     assert_that(_MANIFEST.id).is_equal_to("com.decker.utilities")
     assert_that(_MANIFEST.format).is_equal_to(3)
-    assert_that(_MANIFEST.version).is_equal_to("1.0.0")
+    assert_that(_MANIFEST.version).is_equal_to("2.0.0")
     assert_that(_MANIFEST.decker).is_equal_to(">=0.7.2")
     assert_that(_MANIFEST.category).is_equal_to("Utilities")
     assert_that(_MANIFEST.homepage).is_equal_to("https://github.com/valsr/decker-plugins")
