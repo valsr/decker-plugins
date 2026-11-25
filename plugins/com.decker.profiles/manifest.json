@@ -2,13 +2,13 @@
   "format": 3,
   "id": "com.decker.profiles",
   "name": "Profiles",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": "Decker",
   "description": "Actions for moving between a device's profiles.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/profiles",
   "category": "Utilities",
-  "decker": ">=0.7",
+  "decker": ">=0.8",
   "runtime": {
     "type": "python",
     "entry": "plugin.py"
@@ -58,6 +58,78 @@
             "label": "Profile"
           }
         ]
+      }
+    ],
+    "presets": [
+      {
+        "id": "com.decker.profiles.preset-next",
+        "name": "Next profile",
+        "tooltip": "Go to the next profile",
+        "icon": "fas:forward",
+        "appearance": {
+          "icon": {
+            "ref": "fas:forward",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.profiles.next",
+            "args": {
+              "wrap": true
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.profiles.preset-previous",
+        "name": "Previous profile",
+        "tooltip": "Go to the previous profile",
+        "icon": "fas:backward",
+        "appearance": {
+          "icon": {
+            "ref": "fas:backward",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.profiles.previous",
+            "args": {
+              "wrap": true
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.profiles.preset-goto",
+        "name": "Go to profile",
+        "tooltip": "Go to a chosen profile",
+        "icon": "fas:layer-group",
+        "appearance": {
+          "icon": {
+            "ref": "fas:layer-group",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.profiles.goto"
+          }
+        }
+      },
+      {
+        "id": "com.decker.profiles.preset-name",
+        "name": "Profile Name",
+        "tooltip": "Shows the name of the current profile",
+        "icon": "fas:tag",
+        "appearance": {
+          "title": {
+            "text": "{current_profile}",
+            "position": "middle",
+            "size": 16
+          }
+        }
       }
     ]
   }
