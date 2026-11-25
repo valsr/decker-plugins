@@ -11,8 +11,8 @@ permissions. See Decker's `docs/plugins/repositories.md`.
 
 ## Requirements and Font Awesome
 
-The plugins here use manifest format 3 and declare `"decker": ">=0.7"` (Utilities: `">=0.7.2"`), so they need
-Decker 0.7 or newer (Utilities 0.7.2). The former Fontawesome plugin (`com.decker.fontawesome`) is retired: Font
+The plugins here use manifest format 3 and declare `"decker": ">=0.7"`; Pages, Profiles and Utilities declare `">=0.8"`
+because they contribute presets (see below), so those three need Decker 0.8 or newer. The former Fontawesome plugin (`com.decker.fontawesome`) is retired: Font
 Awesome Free 7.3.1 is built into Decker 0.7 as the Built-In icon packs, referenced as `fab:<name>` (brands),
 `far:<name>` (regular) and `fas:<name>` (solid), for example `fas:play`. Existing `pack:com.decker.fontawesome.*`
 references need to be switched to those forms.
@@ -44,18 +44,21 @@ A published version is never changed: the same id and version must always be the
 
 ## Utilities
 
-`com.decker.utilities` (needs Decker 0.7.2 or newer) bundles utility cards and actions.
+`com.decker.utilities` (2.1.0, needs Decker 0.8 or newer) bundles utility cards and actions.
 
-Cards: Counter, Brightness Level, Deck Brightness Level, Sleep, Timer and Stopwatch. The Page, Profile and
-Brightness/Deck Brightness Up and Down functions are global actions only (Actions tab); bind them to a Blank card.
+Cards: Counter, Brightness Level, Deck Brightness Level, Sleep, Timer and Stopwatch.
+
+Presets (Cards pane in the sidebar, drop onto a key): Brightness Up/Down, Deck Brightness Up/Down and Lock screen.
+The Page and Profile actions remain as global actions; Pages and Profiles offer presets for the same job.
 
 - Brightness Level shows the display brightness (press up, double press down, long press set 75%); its `monitor`
   setting picks the monitor. The Deck variant controls the Stream Deck's own brightness.
 - Sleep: press sleeps now (or cancels a running countdown), double press sleeps in 1 minute, long press in 10.
 - Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
   double or long press resets.
-- The Counter card offers the same functions as the standalone Counter. Pages and Profiles (3.0.0) ship global
-  actions only (`next`, `previous`, `goto`) and no cards; as do the `page` and `profile` actions here.
+- The Counter card offers the same functions as the standalone Counter. Pages and Profiles (3.1.0) ship global
+  actions (`next`, `previous`, `goto`) and presets (Next/Previous/Go to page or profile, Page Name, Page Count, Profile
+  Name) and no cards.
 
 Global actions: `brightness`, `deck-brightness`, `sleep`, `lock`, `page`, `profile` and `sleep-cancel` (cancels every
 running Sleep countdown; countdowns keep running when their key is removed or its page is left). Plugin-scoped actions
