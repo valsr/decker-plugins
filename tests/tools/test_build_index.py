@@ -141,7 +141,11 @@ def test_font_awesome_manifest_icon_is_rendered_to_png(tmp_path: Path) -> None:
 
     index_path = build_index([entry], plugins, tmp_path / "site")
 
-    assert_that(_built_icon(tmp_path / "site").size).is_equal_to((256, 256))
+    image = _built_icon(tmp_path / "site").convert("RGBA")
+    assert_that(image.size).is_equal_to((256, 256))
+    glyph = [px for px in image.getdata() if px[3] == 255]
+    assert_that(glyph).is_not_empty()
+    assert_that(set(glyph)).is_equal_to({(128, 128, 128, 255)})
     plugin = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]
     assert_that(plugin["icon"]).is_equal_to("icons/com.example.demo.png")
 
