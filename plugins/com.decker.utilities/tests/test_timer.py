@@ -477,32 +477,40 @@ def test_finishing_shows_zero_and_alerts_three_times(timers: Timers, clock: Fake
 
 def test_the_alerts_are_spaced_by_the_delay_off_the_ticking_thread(clock: FakeClock) -> None:
     timers = Timers(clock=clock, interval=3600, alert_delay=3600)
-    ctx = _track(timers, minutes=0, seconds=5)
-    timers.toggle("k1", 5)
-    clock.now += 5
+    try:
+        ctx = _track(timers, minutes=0, seconds=5)
+        timers.toggle("k1", 5)
+        clock.now += 5
 
-    timers.tick()  # returns although the next alerts are an hour away
+        timers.tick()  # returns although the next alerts are an hour away
 
-    assert_that(ctx.alerts.acquire(timeout=_WAIT)).is_true()
-    assert_that(timers.pending_alerts()).is_equal_to(1)
-    timers.reset("k1")
-    assert_that(wait_for(lambda: timers.pending_alerts() == 0)).is_true()
-    assert_that(ctx.alert_count).is_equal_to(1)
+        assert_that(ctx.alerts.acquire(timeout=_WAIT)).is_true()
+        assert_that(timers.pending_alerts()).is_equal_to(1)
+        timers.reset("k1")
+        assert_that(wait_for(lambda: timers.pending_alerts() == 0)).is_true()
+        assert_that(ctx.alert_count).is_equal_to(1)
+    finally:
+        timers.stop()
+        timers.clear()
 
 
 def test_a_restart_during_the_alerts_cancels_the_rest(clock: FakeClock) -> None:
     timers = Timers(clock=clock, interval=3600, alert_delay=3600)
-    ctx = _track(timers, minutes=0, seconds=5)
-    timers.toggle("k1", 5)
-    clock.now += 5
-    timers.tick()
-    assert_that(ctx.alerts.acquire(timeout=_WAIT)).is_true()
+    try:
+        ctx = _track(timers, minutes=0, seconds=5)
+        timers.toggle("k1", 5)
+        clock.now += 5
+        timers.tick()
+        assert_that(ctx.alerts.acquire(timeout=_WAIT)).is_true()
 
-    timers.toggle("k1", 5)
+        timers.toggle("k1", 5)
 
-    assert_that(wait_for(lambda: timers.pending_alerts() == 0)).is_true()
-    assert_that(ctx.alert_count).is_equal_to(1)
-    assert_that(timers.state("k1")).is_equal_to("running")
+        assert_that(wait_for(lambda: timers.pending_alerts() == 0)).is_true()
+        assert_that(ctx.alert_count).is_equal_to(1)
+        assert_that(timers.state("k1")).is_equal_to("running")
+    finally:
+        timers.stop()
+        timers.clear()
 
 
 def test_a_timer_found_far_past_its_deadline_finishes_silently(timers: Timers, clock: FakeClock) -> None:

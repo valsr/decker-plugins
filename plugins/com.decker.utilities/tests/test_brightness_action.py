@@ -461,6 +461,10 @@ def test_a_card_tracked_before_the_poll_starts_still_repaints(backend: FakeBacke
     started = _service.begin_run()
     try:
         _wait_monitors(2)
+        deadline = time.monotonic() + 5
+        while not early.titles:  # the first poll's repaint must land before the level changes under it
+            assert time.monotonic() < deadline, "the early card was never painted"
+            time.sleep(0.01)
         backend.levels["a"] = 20
         cache().poll_once()
 
