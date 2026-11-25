@@ -5,6 +5,7 @@ from pathlib import Path
 from assertpy import assert_that
 from decker.plugin.icons import read_icon
 from decker.plugin.manifest import PluginManifest
+from decker.plugin.settings_schema import validate_settings
 
 _DIR = Path(__file__).parents[1]
 _MANIFEST = PluginManifest.load(_DIR / "manifest.json")
@@ -13,8 +14,8 @@ _MANIFEST = PluginManifest.load(_DIR / "manifest.json")
 def test_identity_and_version_constraints():
     assert_that(_MANIFEST.id).is_equal_to("com.decker.utilities")
     assert_that(_MANIFEST.format).is_equal_to(3)
-    assert_that(_MANIFEST.version).is_equal_to("2.0.0")
-    assert_that(_MANIFEST.decker).is_equal_to(">=0.7.2")
+    assert_that(_MANIFEST.version).is_equal_to("2.1.0")
+    assert_that(_MANIFEST.decker).is_equal_to(">=0.8")
     assert_that(_MANIFEST.category).is_equal_to("Utilities")
     assert_that(_MANIFEST.homepage).is_equal_to("https://github.com/valsr/decker-plugins")
 
@@ -70,4 +71,67 @@ def test_every_action_the_kept_cards_bind_still_exists() -> None:
         "com.decker.utilities.profile",
         "com.decker.utilities.brightness",
         "com.decker.utilities.deck-brightness",
+    )
+
+
+_NOTHING = "com.decker.core.nothing"
+_PRESETS = {
+    "preset-brightness-up": ("Brightness Up", "brightness", {"mode": "increase", "value": 10}, "fas:sun"),
+    "preset-brightness-down": ("Brightness Down", "brightness", {"mode": "decrease", "value": 10}, "fas:sun"),
+    "preset-deck-brightness-up": ("Deck Brightness Up", "deck-brightness", {"mode": "increase", "value": 10}, "fas:tv"),
+    "preset-deck-brightness-down": (
+        "Deck Brightness Down",
+        "deck-brightness",
+        {"mode": "decrease", "value": 10},
+        "fas:tv",
+    ),
+    "preset-lock": ("Lock screen", "lock", {}, "fas:lock"),
+}
+
+
+def test_presets_are_declared_and_bound() -> None:
+    by_id = {p.id: p for p in _MANIFEST.presets}
+    actions = {a.id: a for a in _MANIFEST.actions}
+
+    assert_that(set(by_id)).is_equal_to({f"com.decker.utilities.{k}" for k in _PRESETS})
+    for key, (name, action, args, icon) in _PRESETS.items():
+        preset = by_id[f"com.decker.utilities.{key}"]
+        press = preset.bindings["press"]
+        action_id = f"com.decker.utilities.{action}"
+        assert_that(preset.name).is_equal_to(name)
+        assert_that(preset.icon).is_equal_to(icon)
+        assert_that(press.action).is_equal_to(action_id)
+        assert_that(dict(press.args)).is_equal_to(args)
+        assert_that(actions[action_id].scope).is_equal_to("global")
+        assert_that(validate_settings(actions[action_id].settings, press.args)).is_empty()
+        assert_that(preset.appearance["icon"]).is_equal_to({"ref": icon, "color": "#ffffff"})
+        assert_that(set(preset.bindings)).is_subset_of({"press", "double_press", "long_press"})
+
+
+def test_no_sleep_preset() -> None:
+    for preset in _MANIFEST.presets:
+        assert_that(preset.id).does_not_contain("sleep")
+        assert_that({b.action for b in preset.bindings.values()}).does_not_contain(
+            "com.decker.utilities.sleep", "com.decker.utilities.sleep-cancel"
+        )
+    assert_that([p.id for p in _MANIFEST.presets]).does_not_contain_duplicates()
+
+
+def test_actions_scopes_unchanged() -> None:
+    scopes = {a.id.removeprefix("com.decker.utilities."): a.scope for a in _MANIFEST.actions}
+    global_ids = {"brightness", "deck-brightness", "sleep", "lock", "sleep-cancel", "page", "profile"}
+
+    assert_that({k for k, v in scopes.items() if v == "global"}).is_equal_to(global_ids)
+    assert_that({k for k, v in scopes.items() if v == "plugin"}).is_equal_to(
+        {
+            "counter-increment",
+            "counter-decrement",
+            "counter-reset",
+            "sleep-press",
+            "sleep-after",
+            "timer-toggle",
+            "timer-reset",
+            "stopwatch-toggle",
+            "stopwatch-reset",
+        }
     )
