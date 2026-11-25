@@ -12,7 +12,7 @@ permissions. See Decker's `docs/plugins/repositories.md`.
 ## Requirements and Font Awesome
 
 The plugins here use manifest format 3; Pages and Profiles declare `"decker": ">=0.8"` because they contribute
-presets (see below). Counter (2.0.1) and Utilities (2.1.1) declare `">=0.8.1"`: their cards list
+presets (see below). Counter (2.0.2) and Utilities (2.1.2) declare `">=0.8.1"`: their cards list
 their own actions in `cards[].actions`, which Decker 0.8.1 introduced. The former Fontawesome plugin (`com.decker.fontawesome`) is retired: Font
 Awesome Free 7.3.1 is built into Decker 0.7 as the Built-In icon packs, referenced as `fab:<name>` (brands),
 `far:<name>` (regular) and `fas:<name>` (solid), for example `fas:play`. Existing `pack:com.decker.fontawesome.*`
@@ -45,7 +45,7 @@ A published version is never changed: the same id and version must always be the
 
 ## Utilities
 
-`com.decker.utilities` (2.1.1, needs Decker 0.8.1 or newer) bundles utility cards and actions.
+`com.decker.utilities` (2.1.2, needs Decker 0.8.1 or newer) bundles utility cards and actions.
 
 Cards: Counter, Brightness Level, Deck Brightness Level, Sleep, Timer and Stopwatch.
 
@@ -57,7 +57,7 @@ The Page and Profile actions remain as global actions; Pages and Profiles offer 
 - Sleep: press sleeps now (or cancels a running countdown), double press sleeps in 1 minute, long press in 10.
 - Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
   double or long press resets.
-- The Counter card offers the same functions as the standalone Counter. Pages and Profiles (3.1.0) ship global
+- The Counter card offers the same functions as the standalone Counter. Pages and Profiles (3.1.1) ship global
   actions (`next`, `previous`, `goto`) and presets (Next/Previous/Go to page or profile, Page Name, Page Count, Profile
   Name) and no cards.
 

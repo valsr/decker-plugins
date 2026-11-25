@@ -2,11 +2,11 @@
   "format": 3,
   "id": "com.decker.utilities",
   "name": "Utilities",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "author": "Decker",
   "description": "Brightness, sleep, timer, stopwatch, counter, page and profile keys.",
   "homepage": "https://github.com/valsr/decker-plugins",
-  "icon": "icons/utilities",
+  "icon": "fas:toolbox",
   "category": "Utilities",
   "decker": ">=0.8.1",
   "platforms": [
@@ -29,7 +29,7 @@
         "id": "com.decker.utilities.counter",
         "name": "Counter",
         "tooltip": "Press to count up, double press to count down, long press to reset",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "actions": ["com.decker.utilities.counter-increment", "com.decker.utilities.counter-decrement", "com.decker.utilities.counter-reset"],
         "appearance": {
           "background": "#1f618d"
@@ -117,7 +117,7 @@
         "id": "com.decker.utilities.deck-brightness-level",
         "name": "Deck Brightness Level",
         "tooltip": "Shows the Stream Deck's brightness; press to raise it, double press to lower it, long press to set it to 75%",
-        "icon": "icons/utilities",
+        "icon": "fas:toolbox",
         "appearance": {
           "background": "#000000"
         },
@@ -306,7 +306,7 @@
         "id": "com.decker.utilities.counter-increment",
         "name": "Count up",
         "tooltip": "Adds the step to the Counter card's count",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "scope": "plugin",
         "settings": [
           {
@@ -323,7 +323,7 @@
         "id": "com.decker.utilities.counter-decrement",
         "name": "Count down",
         "tooltip": "Subtracts the step from the Counter card's count",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "scope": "plugin",
         "settings": [
           {
@@ -340,7 +340,7 @@
         "id": "com.decker.utilities.counter-reset",
         "name": "Reset count",
         "tooltip": "Sets the Counter card's count back to 0",
-        "icon": "icons/counter",
+        "icon": "fas:calculator",
         "scope": "plugin",
         "settings": []
       },
@@ -485,7 +485,7 @@
         "id": "com.decker.utilities.deck-brightness",
         "name": "Deck Brightness",
         "tooltip": "Raise, lower or set the Stream Deck's own brightness",
-        "icon": "icons/utilities",
+        "icon": "fas:toolbox",
         "scope": "global",
         "returns": "The brightness level sent, 0-100 (the server clamps it to 1-100)",
         "settings": [
