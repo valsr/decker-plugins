@@ -9,9 +9,6 @@ from types import ModuleType
 from typing import Any
 
 from assertpy import assert_that
-from decker.common.model import ProfileInfo
-from decker.plugin.manifest import PluginManifest
-from decker.server.page_vars import DeviceLayout, deliver_settings
 from decker_plugin_sdk import run
 from decker_plugin_sdk._actions import registered_actions
 
@@ -27,36 +24,10 @@ def load_plugin() -> ModuleType:
     return module
 
 
-def goto_bindings(profile: Any, action: str = "com.decker.profiles.goto") -> dict[str, Any]:
-    """Hand-made bindings of a Go To card whose press goes to `profile` (any shape, including garbage).
-
-    The shape the server really sends comes from `server_goto_bindings`.
-    """
-    return {"press": {"action": action, "args": {"profile": profile}}}
-
-
-def server_goto_bindings(
-    profile_id: str,
-    profiles: tuple[tuple[int, str, str], ...] = ((0, "Default", ""), (2, "Work", "pack:a/b.svg")),
-    action: str = "com.decker.profiles.goto",
-) -> dict[str, Any]:
-    """The bindings Decker really sends a Go To card: the stored profile id resolved by Decker's own code.
-
-    Builds a layout of `profiles` ((id, name, icon) triples) and delivers the stored `profile` argument through
-    ``deliver_settings`` with the action's schema from the plugin's own manifest, as the server does.
-    """
-    manifest = PluginManifest.load(PLUGIN_DIR / "manifest.json")
-    spec = next(a for a in manifest.actions if a.id == action)
-    infos = tuple(ProfileInfo(pid, name, icon) for pid, name, icon in profiles)
-    layout = DeviceLayout(profiles=infos, active_profile_id=infos[0].profile_id)
-    args = deliver_settings(spec.settings, {"profile": profile_id}, layout, {})
-    return {"press": {"action": action, "args": args}}
-
-
 class Harness:
-    """One card class (and the plugin's actions) on os.pipe streams."""
+    """The plugin's actions on os.pipe streams, run as if from a card."""
 
-    def __init__(self, plugin: ModuleType, action_id: str, class_name: str) -> None:
+    def __init__(self, plugin: ModuleType, action_id: str) -> None:
         self.action_id = action_id
         self._requests = 0
         self.request = ""
@@ -71,7 +42,7 @@ class Harness:
         self._thread = threading.Thread(
             target=run,
             args=(
-                {action_id: getattr(plugin, class_name)},
+                {},
                 self._plugin_in,
                 self._plugin_out,
                 {k: v for k, v in registered_actions().items() if k.startswith("com.decker.profiles.")},
@@ -108,37 +79,6 @@ class Harness:
             message = self.recv()
             if message["event"] == event:
                 return message
-
-    def collect_settled(self) -> list[dict]:
-        """Every message the plugin sent for earlier events.
-
-        Events of one key are handled in order on a queue, so a final settings change that makes a Go To key
-        send a recognisable title is a barrier: once it arrives, nothing earlier is still on its way.
-        """
-        self.change({}, server_goto_bindings("99", profiles=((99, "SENTINEL", ""),)))
-        seen: list[dict] = []
-        while True:
-            message = self.recv()
-            if message["event"] == "set_title" and message["payload"]["title"] == "SENTINEL":
-                return seen
-            seen.append(message)
-
-    def appear(self, settings: dict[str, Any], bindings: dict[str, Any] | None = None) -> None:
-        self.send(
-            "will_appear",
-            CONTEXT,
-            {
-                "card": self.action_id,
-                "device": "d",
-                "key": {"index": 0, "column": 0, "row": 0},
-                "settings": settings,
-                "bindings": bindings or {},
-                "state": 0,
-            },
-        )
-
-    def change(self, settings: dict[str, Any], bindings: dict[str, Any] | None = None) -> None:
-        self.send("settings_changed", CONTEXT, {"settings": settings, "bindings": bindings or {}})
 
     def run_action(self, action_id: str, args: dict[str, Any], with_card: bool = True) -> dict:
         """Send run_action (with this key as the card) and return its action_result payload."""
