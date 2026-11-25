@@ -76,7 +76,7 @@ def test_build_index_skips_unparseable_version_with_warning(tmp_path: Path, caps
     index_path = build_index([good, bad], PLUGINS, tmp_path / "site")
 
     versions = json.loads(index_path.read_text(encoding="utf-8"))["plugins"][0]["versions"]
-    assert_that([v["version"] for v in versions]).is_equal_to(["2.0.0"])
+    assert_that([v["version"] for v in versions]).is_equal_to(["2.0.1"])
     assert_that(capsys.readouterr().err).contains("1.2.0-foo")
 
 

@@ -22,8 +22,8 @@ def test_version_entry_sha_and_size(tmp_path: Path) -> None:
 
     assert_that(entry).is_equal_to(
         {
-            "version": "2.0.0",
-            "decker": ">=0.7",
+            "version": "2.0.1",
+            "decker": ">=0.8.1",
             "url": "https://example.com/c.deckerplugin",
             "size": len(data),
             "sha256": hashlib.sha256(data).hexdigest(),
@@ -73,7 +73,7 @@ def test_write_sidecar_adds_plugin_id(tmp_path: Path) -> None:
 
     assert_that(sidecar.name).is_equal_to(package.name + ".json")
     data = json.loads(sidecar.read_text(encoding="utf-8"))
-    assert_that(data).contains_entry({"id": "com.decker.counter"}, {"version": "2.0.0"})
+    assert_that(data).contains_entry({"id": "com.decker.counter"}, {"version": "2.0.1"})
 
 
 def test_release_url_defaults_and_env(monkeypatch) -> None:  # type: ignore[no-untyped-def]

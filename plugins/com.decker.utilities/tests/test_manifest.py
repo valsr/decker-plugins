@@ -14,8 +14,8 @@ _MANIFEST = PluginManifest.load(_DIR / "manifest.json")
 def test_identity_and_version_constraints():
     assert_that(_MANIFEST.id).is_equal_to("com.decker.utilities")
     assert_that(_MANIFEST.format).is_equal_to(3)
-    assert_that(_MANIFEST.version).is_equal_to("2.1.0")
-    assert_that(_MANIFEST.decker).is_equal_to(">=0.8")
+    assert_that(_MANIFEST.version).is_equal_to("2.1.1")
+    assert_that(_MANIFEST.decker).is_equal_to(">=0.8.1")
     assert_that(_MANIFEST.category).is_equal_to("Utilities")
     assert_that(_MANIFEST.homepage).is_equal_to("https://github.com/valsr/decker-plugins")
 
@@ -135,3 +135,26 @@ def test_actions_scopes_unchanged() -> None:
             "stopwatch-reset",
         }
     )
+
+
+def test_cards_declare_their_actions() -> None:
+    declared = {c.id.removeprefix("com.decker.utilities."): c.actions for c in _MANIFEST.cards}
+
+    assert_that(declared).is_equal_to(
+        {
+            "counter": tuple(f"com.decker.utilities.counter-{a}" for a in ("increment", "decrement", "reset")),
+            "sleep": ("com.decker.utilities.sleep-press", "com.decker.utilities.sleep-after"),
+            "timer": ("com.decker.utilities.timer-toggle", "com.decker.utilities.timer-reset"),
+            "stopwatch": ("com.decker.utilities.stopwatch-toggle", "com.decker.utilities.stopwatch-reset"),
+            "brightness-level": (),
+            "deck-brightness-level": (),
+        }
+    )
+
+
+def test_every_plugin_action_is_claimed_by_a_card() -> None:
+    claimed = [a for c in _MANIFEST.cards for a in c.actions]
+    plugin_scoped = {a.id for a in _MANIFEST.actions if a.scope == "plugin"}
+
+    assert_that(set(claimed)).is_equal_to(plugin_scoped)
+    assert_that(claimed).does_not_contain_duplicates()
