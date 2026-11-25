@@ -80,7 +80,7 @@ class _Service:
             self._cards.pop(ctx.context, None)
 
     def begin_run(self) -> BrightnessCache:
-        """Start polling for a new SDK runtime; its variables and cards are not known to the server yet."""
+        """Start polling for a new SDK runtime: its variables register afresh, the tracked cards are kept."""
         with self._lock:
             self._registered.clear()
         cache = self.cache()
