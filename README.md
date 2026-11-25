@@ -41,6 +41,38 @@ Any change below `plugins/<id>/` needs a manifest `version` (semver `x.y.z`) gre
 The version must be valid semver and also parseable as a PEP 440 version (no `-rc`-style suffixes unless PEP 440 accepts them). A plugin with no tag yet passes. CI runs `python -m tools.check_versions origin/<base>` on pull requests and fails otherwise.
 A published version is never changed: the same id and version must always be the same bytes.
 
+## Utilities
+
+`com.decker.utilities` (needs Decker 0.7.2 or newer) bundles utility cards and actions.
+
+Cards: Counter, Page, Profile, Brightness Level, Brightness Up, Brightness Down, Deck Brightness Level, Deck Brightness
+Up, Deck Brightness Down, Sleep, Timer and Stopwatch.
+
+- Brightness Level shows the display brightness (press up, double press down, long press set 75%); its `monitor`
+  setting picks the monitor. Up/Down are static keys (long press sets 75% or 25%). The Deck variants control the
+  Stream Deck's own brightness.
+- Sleep: press sleeps now (or cancels a running countdown), double press sleeps in 1 minute, long press in 10.
+- Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
+  double or long press resets.
+- Counter, Page and Profile cards offer the same functions as the standalone Counter, Pages and Profiles plugins.
+
+Global actions: `brightness`, `deck-brightness`, `sleep`, `lock`, `page`, `profile` and `sleep-cancel` (cancels every
+running Sleep countdown; countdowns keep running when their key is removed or its page is left). Plugin-scoped actions
+used by the cards: `counter-increment`, `counter-decrement`, `counter-reset`, `sleep-press`, `sleep-after`,
+`timer-toggle`, `timer-reset`, `stopwatch-toggle`, `stopwatch-reset`.
+
+Variables: `brightness_level`, `brightness_level_{monitor}` (1-based), `deck_brightness_level`,
+`deck_brightness_level_{device}` and `sleep_in`.
+
+Caveats:
+
+- The `monitor` setting of a Brightness Level card steers its bindings: an explicit `all` binding on that card follows
+  the card's setting.
+- Timers, Sleep countdowns and stopwatches are lost when the plugin restarts. They measure real time across system
+  sleep; a timer that ends during system sleep finishes quietly on wake (more than 5 seconds late).
+- Platform requirements (external monitors, macOS Accessibility, Linux locker) are in the
+  [platform table](#platform-support). None of it is verified on real hardware yet.
+
 ## Publishing
 
 On every push to `main`, `publish.yml` packs all plugins; for each version without a release it creates the release
@@ -60,6 +92,7 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 | counter (`com.decker.counter`)[^2] | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | pages (`com.decker.pages`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | profiles (`com.decker.profiles`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
+| utilities (`com.decker.utilities`)[^5] | ⚠️[^6] | ⚠️[^6] | ⚠️[^7] | ⚠️[^6] | ⚠️[^8] |
 
 [^1]: CI means the GitHub Actions workflow
     ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
@@ -75,6 +108,14 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 [^4]: The Arch Linux container runs the same tests as an advisory check (`continue-on-error`, since a rolling release
     can break without a change here). It covers Arch, not the Plasma desktop or Wayland, and the maintainer has not
     yet used the plugins there, so the cell is ✅ on CI evidence alone.
+[^5]: Utilities bundles Counter, Page and Profile keys with brightness, sleep, lock, timer and stopwatch keys; see
+    [Utilities](#utilities). Its tests run in CI, but the OS-facing parts (display brightness, sleep, lock) are not
+    verified on real hardware on any OS yet.
+[^6]: Linux external monitors need `ddcutil`, the `i2c-dev` kernel module and membership of the `i2c` group (laptop
+    panels work without them). Windows uses `screen-brightness-control` (WMI, DDC/CI); not verified.
+[^7]: As above, plus Lock needs a logind-aware locker (`loginctl lock-session` must reach a running screen locker).
+[^8]: macOS controls the internal display only, and Lock needs the Accessibility permission for Decker's plugin
+    process.
 
 Pages and Profiles use no OS APIs. No manifest declares `platforms` or `linux`, which means all
 platforms; the table above records what has been verified, not what the manifests restrict.
