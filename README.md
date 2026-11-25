@@ -11,10 +11,11 @@ permissions. See Decker's `docs/plugins/repositories.md`.
 
 ## Requirements and Font Awesome
 
-The plugins here use manifest format 3 and declare `"decker": ">=0.7"` (Utilities: `">=0.7.2"`), so they need Decker 0.7 or newer (Utilities 0.7.2). The former
-Fontawesome plugin (`com.decker.fontawesome`) is retired: Font Awesome Free 7.3.1 is built into Decker 0.7 as the
-Built-In icon packs, referenced as `fab:<name>` (brands), `far:<name>` (regular) and `fas:<name>` (solid), for example
-`fas:play`. Existing `pack:com.decker.fontawesome.*` references need to be switched to those forms.
+The plugins here use manifest format 3 and declare `"decker": ">=0.7"` (Utilities: `">=0.7.2"`), so they need
+Decker 0.7 or newer (Utilities 0.7.2). The former Fontawesome plugin (`com.decker.fontawesome`) is retired: Font
+Awesome Free 7.3.1 is built into Decker 0.7 as the Built-In icon packs, referenced as `fab:<name>` (brands),
+`far:<name>` (regular) and `fas:<name>` (solid), for example `fas:play`. Existing `pack:com.decker.fontawesome.*`
+references need to be switched to those forms.
 
 ## Layout
 
@@ -49,8 +50,8 @@ Cards: Counter, Page, Profile, Brightness Level, Brightness Up, Brightness Down,
 Up, Deck Brightness Down, Sleep, Timer and Stopwatch.
 
 - Brightness Level shows the display brightness (press up, double press down, long press set 75%); its `monitor`
-  setting picks the monitor. Up/Down are static keys (long press sets 75% or 25%). The Deck variants control the
-  Stream Deck's own brightness.
+  setting picks the monitor. Up/Down are static keys: press steps by 10, double press by a small step of 5, long press
+  sets 75% (Up) or 25% (Down). The Deck variants control the Stream Deck's own brightness.
 - Sleep: press sleeps now (or cancels a running countdown), double press sleeps in 1 minute, long press in 10.
 - Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
   double or long press resets.
@@ -69,7 +70,8 @@ Caveats:
 - The `monitor` setting of a Brightness Level card steers its bindings: an explicit `all` binding on that card follows
   the card's setting.
 - Timers, Sleep countdowns and stopwatches are lost when the plugin restarts. They measure real time across system
-  sleep; a timer that ends during system sleep finishes quietly on wake (more than 5 seconds late).
+  sleep (on a clock that keeps counting while the machine is suspended). One that ends during system sleep is not fired
+  late: a timer finishes quietly on wake, a Sleep countdown is dropped (more than 5 seconds late).
 - Platform requirements (external monitors, macOS Accessibility, Linux locker) are in the
   [platform table](#platform-support). None of it is verified on real hardware yet.
 
@@ -92,7 +94,7 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
 | counter (`com.decker.counter`)[^2] | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | pages (`com.decker.pages`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
 | profiles (`com.decker.profiles`) | ✅[^4] | ✅[^3] | ⚠️ | ✅ | ✅ |
-| utilities (`com.decker.utilities`)[^5] | ⚠️[^6] | ⚠️[^6] | ⚠️[^7] | ⚠️[^6] | ⚠️[^8] |
+| utilities (`com.decker.utilities`)[^5] | ⚠️[^6] | ⚠️[^6] | ⚠️[^7] | ⚠️[^8] | ⚠️[^9] |
 
 [^1]: CI means the GitHub Actions workflow
     ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
@@ -112,11 +114,14 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
     [Utilities](#utilities). Its tests run in CI, but the OS-facing parts (display brightness, sleep, lock) are not
     verified on real hardware on any OS yet.
 [^6]: Linux external monitors need `ddcutil`, the `i2c-dev` kernel module and membership of the `i2c` group (laptop
-    panels work without them). Windows uses `screen-brightness-control` (WMI, DDC/CI); not verified.
+    panels work without them).
 [^7]: As above, plus Lock needs a logind-aware locker (`loginctl lock-session` must reach a running screen locker).
-[^8]: macOS controls the internal display only, and Lock needs the Accessibility permission for Decker's plugin
-    process.
+[^8]: Windows uses `screen-brightness-control` (WMI, DDC/CI); not verified.
+[^9]: macOS controls the internal display only, and Lock needs the Accessibility permission for "Decker (or the
+    terminal running it)". On a Mac without a built-in display (mini, Studio, Pro) "Built-in display" is still listed
+    and the brightness actions fail with a clear error.
 
-Pages and Profiles use no OS APIs. Only the Utilities manifest declares `platforms` (all three: `linux`,
-`windows`, `macos`) and none declares `linux`, so no manifest restricts any platform; the table above records what has been verified, not what the manifests restrict.
+Pages and Profiles use no OS APIs. Only the Utilities manifest declares `platforms` (all three: `linux`, `windows`,
+`macos`) and no manifest has a `linux` key, so no manifest restricts any platform; the table above records what has
+been verified, not what the manifests restrict.
 
