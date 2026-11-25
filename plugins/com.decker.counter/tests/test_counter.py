@@ -162,10 +162,10 @@ def _same_pixels(left: bytes, right: bytes) -> bool:
 
 
 class TestManifest:
-    def test_manifest_is_format_3_and_needs_decker_0_7(self):
+    def test_manifest_is_format_3_and_needs_decker_0_8_1(self):
         assert_that(_MANIFEST.format).is_equal_to(3)
-        assert_that(_MANIFEST.version).is_equal_to("2.0.0")
-        assert_that(_MANIFEST.decker).is_equal_to(">=0.7")
+        assert_that(_MANIFEST.version).is_equal_to("2.0.1")
+        assert_that(_MANIFEST.decker).is_equal_to(">=0.8.1")
         assert_that(_MANIFEST.runtime.requirements).is_equal_to(("pillow>=12",))
 
     def test_default_bindings_press_double_long(self):

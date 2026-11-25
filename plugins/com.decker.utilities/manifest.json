@@ -2,13 +2,13 @@
   "format": 3,
   "id": "com.decker.utilities",
   "name": "Utilities",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "author": "Decker",
   "description": "Brightness, sleep, timer, stopwatch, counter, page and profile keys.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/utilities",
   "category": "Utilities",
-  "decker": ">=0.8",
+  "decker": ">=0.8.1",
   "platforms": [
     "linux",
     "windows",
@@ -30,6 +30,7 @@
         "name": "Counter",
         "tooltip": "Press to count up, double press to count down, long press to reset",
         "icon": "icons/counter",
+        "actions": ["com.decker.utilities.counter-increment", "com.decker.utilities.counter-decrement", "com.decker.utilities.counter-reset"],
         "appearance": {
           "background": "#1f618d"
         },
@@ -149,6 +150,7 @@
         "name": "Sleep",
         "tooltip": "Press to sleep now (or cancel a countdown), double press to sleep in 1 minute, long press to sleep in 10 minutes",
         "icon": "fas:moon",
+        "actions": ["com.decker.utilities.sleep-press", "com.decker.utilities.sleep-after"],
         "appearance": {
           "background": "#000000"
         },
@@ -175,6 +177,7 @@
         "name": "Timer",
         "tooltip": "A countdown timer: press to start, pause or resume it, double or long press to reset it; it rings when it ends",
         "icon": "fas:stopwatch",
+        "actions": ["com.decker.utilities.timer-toggle", "com.decker.utilities.timer-reset"],
         "appearance": {
           "background": "#000000"
         },
@@ -281,6 +284,7 @@
         "name": "Stopwatch",
         "tooltip": "A stopwatch: press to start or pause it, double or long press to reset it",
         "icon": "fas:stopwatch",
+        "actions": ["com.decker.utilities.stopwatch-toggle", "com.decker.utilities.stopwatch-reset"],
         "appearance": {
           "background": "#000000"
         },

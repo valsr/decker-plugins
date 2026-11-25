@@ -12,9 +12,9 @@ def test_pack_all_packs_counter(tmp_path: Path) -> None:
     packages = pack_all(PLUGINS, tmp_path)
 
     names = [p.name for p in packages]
-    assert_that(names).contains("com.decker.counter-2.0.0.deckerplugin")
+    assert_that(names).contains("com.decker.counter-2.0.1.deckerplugin")
     assert_that(names).is_equal_to(sorted(names))
-    counter = next(p for p in packages if p.name == "com.decker.counter-2.0.0.deckerplugin")
+    counter = next(p for p in packages if p.name == "com.decker.counter-2.0.1.deckerplugin")
     with zipfile.ZipFile(counter) as zf:
         assert_that(zf.namelist()).contains("manifest.json", "plugin.py")
         assert_that([n for n in zf.namelist() if n.startswith("tests")]).is_empty()
@@ -35,5 +35,5 @@ def test_pack_all_cli_prints_manifest_id_and_version(tmp_path: Path, capsys, mon
     module.main()
 
     lines = capsys.readouterr().out.strip().splitlines()
-    assert_that(lines).contains(f"com.decker.counter 2.0.0 {tmp_path / 'com.decker.counter-2.0.0.deckerplugin'}")
+    assert_that(lines).contains(f"com.decker.counter 2.0.1 {tmp_path / 'com.decker.counter-2.0.1.deckerplugin'}")
     assert_that(lines).is_equal_to(sorted(lines))

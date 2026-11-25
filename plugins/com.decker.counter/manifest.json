@@ -2,13 +2,13 @@
   "format": 3,
   "id": "com.decker.counter",
   "name": "Counter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "author": "Decker",
   "description": "Counts key presses.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/counter",
   "category": "Utilities",
-  "decker": ">=0.7",
+  "decker": ">=0.8.1",
   "runtime": { "type": "python", "entry": "plugin.py", "requirements": ["pillow>=12"] },
   "contributes": {
     "cards": [
@@ -17,6 +17,7 @@
         "name": "Counter",
         "tooltip": "Press to count up, double press to count down, long press to reset",
         "icon": "icons/counter",
+        "actions": ["com.decker.counter.increment", "com.decker.counter.decrement", "com.decker.counter.reset"],
         "appearance": { "background": "#1f618d" },
         "bindings": {
           "press": { "action": "com.decker.counter.increment", "args": { "step": 1 } },
