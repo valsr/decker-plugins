@@ -2,13 +2,13 @@
   "format": 3,
   "id": "com.decker.utilities",
   "name": "Utilities",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": "Decker",
   "description": "Brightness, sleep, timer, stopwatch, counter, page and profile keys.",
   "homepage": "https://github.com/valsr/decker-plugins",
   "icon": "icons/utilities",
   "category": "Utilities",
-  "decker": ">=0.7.2",
+  "decker": ">=0.8",
   "platforms": [
     "linux",
     "windows",
@@ -625,6 +625,109 @@
       {
         "name": "sleep_in",
         "description": "Time until the soonest running Sleep countdown, m:ss or h:mm:ss (empty if none)"
+      }
+    ],
+    "presets": [
+      {
+        "id": "com.decker.utilities.preset-brightness-up",
+        "name": "Brightness Up",
+        "tooltip": "Raise the display brightness by 10%",
+        "icon": "fas:sun",
+        "appearance": {
+          "icon": {
+            "ref": "fas:sun",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "increase",
+              "value": 10
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.preset-brightness-down",
+        "name": "Brightness Down",
+        "tooltip": "Lower the display brightness by 10%",
+        "icon": "fas:sun",
+        "appearance": {
+          "icon": {
+            "ref": "fas:sun",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 10
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.preset-deck-brightness-up",
+        "name": "Deck Brightness Up",
+        "tooltip": "Raise the Stream Deck's brightness by 10%",
+        "icon": "fas:tv",
+        "appearance": {
+          "icon": {
+            "ref": "fas:tv",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "increase",
+              "value": 10
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.preset-deck-brightness-down",
+        "name": "Deck Brightness Down",
+        "tooltip": "Lower the Stream Deck's brightness by 10%",
+        "icon": "fas:tv",
+        "appearance": {
+          "icon": {
+            "ref": "fas:tv",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.deck-brightness",
+            "args": {
+              "mode": "decrease",
+              "value": 10
+            }
+          }
+        }
+      },
+      {
+        "id": "com.decker.utilities.preset-lock",
+        "name": "Lock screen",
+        "tooltip": "Lock the screen",
+        "icon": "fas:lock",
+        "appearance": {
+          "icon": {
+            "ref": "fas:lock",
+            "color": "#ffffff"
+          }
+        },
+        "bindings": {
+          "press": {
+            "action": "com.decker.utilities.lock"
+          }
+        }
       }
     ]
   }
