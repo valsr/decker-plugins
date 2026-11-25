@@ -2,7 +2,7 @@
   "format": 3,
   "id": "com.decker.utilities",
   "name": "Utilities",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Decker",
   "description": "Brightness, sleep, timer, stopwatch, counter, page and profile keys.",
   "homepage": "https://github.com/valsr/decker-plugins",

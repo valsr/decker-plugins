@@ -170,6 +170,7 @@ def test_windows_zero_result_is_a_power_error(monkeypatch: pytest.MonkeyPatch) -
         lock("win32")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="ctypes.windll exists on Windows")
 def test_windows_api_unavailable_is_a_power_error() -> None:
     with pytest.raises(PowerError, match="Windows"):
         power._windll()

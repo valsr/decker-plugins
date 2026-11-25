@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Folder `plugins/com.decker.utilities/`, manifest `format: 3`, `id: com.decker.utilities`, `version: 1.0.0`, `"decker": ">=0.7.2"`, category `Utilities`, `homepage: https://github.com/valsr/decker-plugins`, `platforms` all three.
+- Folder `plugins/com.decker.utilities/`, manifest `format: 3`, `id: com.decker.utilities`, `version: 2.0.0`, `"decker": ">=0.7.2"`, category `Utilities`, `homepage: https://github.com/valsr/decker-plugins`, `platforms` all three.
 - `runtime.requirements`: `pillow>=12`, `screen-brightness-control; sys_platform != "darwin"`, `jeepney; sys_platform == "linux"` (use the exact requirement-marker syntax the Decker installer accepts; check `docs/plugins/package-and-manifest.md`).
 - Every action/card id is `com.decker.utilities.<name>`; names as listed in each task.
 - Level tint: grey = level, 100 % → `#ffffff`, 0 % → `#000000`, linear, no minimum.
@@ -45,7 +45,7 @@
 **Interfaces:**
 - Produces: `load_plugin() -> ModuleType` and `Harness` (above) for all later tasks; Counter ids `com.decker.utilities.counter` (card), `.counter_increment`, `.counter_decrement`, `.counter_reset` (plugin-scoped, same settings as today's Counter: `step` int 1–9999 default 1; card `max` int 0–99999 special "∞ (no limit)").
 
-- [ ] **Step 1: Write failing tests** — manifest loads with Decker's `parse_manifest` (version 1.0.0, decker `>=0.7.2`, every icon path exists); port `plugins/com.decker.counter/tests/test_counter.py` to the new ids. If Decker plan Task 8 found the crash in the plugin, add its regression test here (e.g. `test_unparseable_step_counts_by_the_default`).
+- [ ] **Step 1: Write failing tests** — manifest loads with Decker's `parse_manifest` (version 2.0.0, decker `>=0.7.2`, every icon path exists); port `plugins/com.decker.counter/tests/test_counter.py` to the new ids. If Decker plan Task 8 found the crash in the plugin, add its regression test here (e.g. `test_unparseable_step_counts_by_the_default`).
 - [ ] **Step 2: Run, expect FAIL** — `uv run pytest plugins/com.decker.utilities -v`
 - [ ] **Step 3: Implement** manifest skeleton (counter card + actions + icon pack; `variables` filled in later tasks — declare `brightness_level` now so the plugin is long-running from the start) and port `CounterCard` + actions from `plugins/com.decker.counter/plugin.py`.
 - [ ] **Step 4: Run, expect PASS.**
@@ -211,6 +211,6 @@ Behaviour: idle shows full duration; running repaints at 4 Hz (well under the fl
 **Files:** `README.md` (platform table row for `utilities (com.decker.utilities)` with footnotes: Linux external monitors need `ddcutil` + `i2c-dev` module + `i2c` group; macOS: internal display only, Lock needs Accessibility; tier 3 lock needs a logind-aware locker), `docs/platform-support.md` if it lists plugins; plugin `README`/description in manifest.
 
 - [ ] **Step 1:** Update docs.
-- [ ] **Step 2:** `uv run pytest` (all), `uv run ruff check .`, `uv run python -m tools.pack_all` → `dist/com.decker.utilities-1.0.0.deckerplugin` exists without `tests/`; `uv run python -m tools.check_versions origin/main` passes.
+- [ ] **Step 2:** `uv run pytest` (all), `uv run ruff check .`, `uv run python -m tools.pack_all` → `dist/com.decker.utilities-2.0.0.deckerplugin` exists without `tests/`; `uv run python -m tools.check_versions origin/main` passes.
 - [ ] **Step 3:** Manual check on the dev machine: install the package in a running Decker 0.7.2, place each card, exercise each gesture once (sleep/lock last).
 - [ ] **Step 4: Commit** — `git commit -m "docs(utilities): README and platform table"`
