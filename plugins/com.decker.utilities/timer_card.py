@@ -12,12 +12,11 @@ import logging
 import math
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from typing import Any
 
 from decker_plugin_sdk import ActionCallContext, ActionError, CardContext, DeckerPlugin, action, card
 from drawing import draw_progress, draw_time, progress_color
-from ticker import Ticker
+from key_registry import KeyRegistry
 from timers import Timer, TimerState, fmt_ms, sleep_inclusive_clock
 
 _log = logging.getLogger(__name__)
@@ -32,14 +31,6 @@ _DEFAULT_WIDTH = 6
 _DEFAULT_COLOR, _DEFAULT_COLOR_2 = "#2ecc71", "#e74c3c"
 
 
-@dataclass
-class _Face:
-    """A live Timer key; the lock serialises its paints so the last one shows the newest state."""
-
-    ctx: CardContext
-    lock: threading.Lock = field(default_factory=threading.Lock)
-
-
 def _int(value: Any, default: int, low: int, high: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int):
         return default
@@ -52,7 +43,7 @@ def duration_of(settings: dict[str, Any]) -> int:
     return minutes * 60 + _int(settings.get("seconds"), 0, 0, _MAX_SECONDS)
 
 
-class Timers:
+class Timers(KeyRegistry[Timer]):
     """The timer registry, the live keys, the finish alerts and the 4 Hz ticker."""
 
     def __init__(
@@ -61,30 +52,23 @@ class Timers:
         interval: float = _INTERVAL,
         alert_delay: float = _ALERT_DELAY,
     ) -> None:
+        super().__init__(interval, "timer-ticker")
         self._clock = clock
         self._alert_delay = alert_delay
-        self._lock = threading.Lock()
-        self._timers: dict[str, Timer] = {}
-        self._faces: dict[str, _Face] = {}
         self._alerts: dict[str, threading.Event] = {}  # the cancel switch of each key's running alert burst
         self._alerting = 0  # alert threads still alive
-        self._ticker = Ticker(interval, self.tick, "timer-ticker")
 
     # --- registry
 
     def state(self, context: str) -> TimerState:
         with self._lock:
-            timer = self._timers.get(context)
+            timer = self._items.get(context)
             return "idle" if timer is None else timer.state
 
     def remaining(self, context: str) -> float:
         with self._lock:
-            timer = self._timers.get(context)
+            timer = self._items.get(context)
             return 0.0 if timer is None else timer.remaining()
-
-    def tracked(self, context: str) -> bool:
-        with self._lock:
-            return context in self._faces
 
     def pending_alerts(self) -> int:
         """How many alert bursts are still running."""
@@ -95,16 +79,15 @@ class Timers:
         with self._lock:
             for cancel in self._alerts.values():
                 cancel.set()
-            self._timers.clear()
-            self._faces.clear()
             self._alerts.clear()
+        super().clear()
 
     def _timer_for(self, context: str, duration: int) -> Timer:
         """The key's timer; a different duration replaces it with a fresh idle one. Call with the lock held."""
-        timer = self._timers.get(context)
+        timer = self._items.get(context)
         if timer is None or timer.duration != duration:
             self._cancel_alert(context)
-            timer = self._timers[context] = Timer(duration, self._clock)
+            timer = self._items[context] = Timer(duration, self._clock)
         return timer
 
     def toggle(self, context: str, duration: int) -> TimerState:
@@ -121,7 +104,7 @@ class Timers:
 
     def reset(self, context: str) -> None:
         with self._lock:
-            timer = self._timers.get(context)
+            timer = self._items.get(context)
             if timer is not None:
                 timer.reset()
             self._cancel_alert(context)
@@ -129,68 +112,36 @@ class Timers:
 
     # --- keys
 
-    def track(self, ctx: CardContext, paint: bool = True) -> _Face:
-        """A key appeared or its settings changed: keep its timer unless the duration differs, then repaint."""
-        with self._lock:
-            self._timer_for(ctx.context, duration_of(ctx.settings))
-            face = self._faces.get(ctx.context)
-            if face is None:
-                face = self._faces[ctx.context] = _Face(ctx)
-            face.ctx = ctx
-        if paint:
-            self.paint(face)
-        return face
+    def _prepare(self, ctx: CardContext) -> None:
+        """Keep the key's timer unless the duration differs."""
+        self._timer_for(ctx.context, duration_of(ctx.settings))
 
     def settings_changed(self, ctx: CardContext) -> None:
         """A new duration resets the timer to idle with it; any other setting only repaints."""
         self.track(ctx)
 
-    def untrack(self, ctx: CardContext) -> None:
-        with self._lock:
-            self._faces.pop(ctx.context, None)
+    def _snapshot(self, ctx: CardContext) -> tuple[float, float]:
+        timer = self._items.get(ctx.context)
+        if timer is None:
+            left = float(duration_of(ctx.settings))
+            return left, 1.0 if left else 0.0
+        return timer.remaining(), timer.fraction_left()
 
-    def paint(self, face: _Face) -> None:
-        """Draw the key; the state is read inside the key's lock so the newest paint shows the newest state."""
-        with face.lock:
-            settings = face.ctx.settings
-            with self._lock:
-                timer = self._timers.get(face.ctx.context)
-                if timer is None:
-                    left = float(duration_of(settings))
-                    fraction = 1.0 if left else 0.0
-                else:
-                    left, fraction = timer.remaining(), timer.fraction_left()
-            with face.ctx.canvas.paint() as img:
-                img.paste((0, 0, 0, 0), (0, 0, *img.size))
-                _draw(img, settings, left, fraction)
-
-    def _paint_key(self, context: str) -> None:
-        with self._lock:
-            face = self._faces.get(context)
-        if face is not None:
-            self.paint(face)
+    def _draw(self, img: Any, settings: dict[str, Any], snapshot: tuple[float, float]) -> None:
+        _draw(img, settings, *snapshot)
 
     # --- ticking
 
     def tick(self) -> None:
         """Finish what ran out and repaint the running keys; safe to call from any thread."""
         with self._lock:
-            running = [c for c, t in self._timers.items() if t.state == "running"]
+            running = [c for c, t in self._items.items() if t.state == "running"]
             for context in running:
-                if self._timers[context].tick():
+                if self._items[context].tick():
                     self._start_alert(context)
             faces = [self._faces[c] for c in running if c in self._faces]
         for face in faces:
             self.paint(face)
-
-    def start_ticker(self) -> None:
-        self._ticker.start()
-
-    def stop(self) -> None:
-        self._ticker.stop()
-
-    def ticker_alive(self) -> bool:
-        return self._ticker.alive()
 
     # --- finish alerts (off the ticker and the message loop)
 

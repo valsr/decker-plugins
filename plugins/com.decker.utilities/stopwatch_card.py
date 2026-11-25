@@ -6,64 +6,40 @@ away; ``will_appear`` repaints the key with the time so far. One daemon ticker t
 process.
 """
 
-import threading
 from collections.abc import Callable
-from dataclasses import dataclass, field
 from typing import Any
 
 from decker_plugin_sdk import ActionCallContext, ActionError, CardContext, DeckerPlugin, action, card
 from drawing import draw_time
-from ticker import Ticker
+from key_registry import KeyRegistry
 from timers import Stopwatch, fmt_ms, sleep_inclusive_clock
 
 CARD = "com.decker.utilities.stopwatch"
 _INTERVAL = 1.0
 
 
-@dataclass
-class _Face:
-    """A live Stopwatch key; the lock serialises its paints so the last one shows the newest time."""
-
-    ctx: CardContext
-    lock: threading.Lock = field(default_factory=threading.Lock)
-
-
-class Stopwatches:
+class Stopwatches(KeyRegistry[Stopwatch]):
     """The stopwatch registry, the live keys and the 1 Hz ticker."""
 
     def __init__(self, clock: Callable[[], float] = sleep_inclusive_clock, interval: float = _INTERVAL) -> None:
+        super().__init__(interval, "stopwatch-ticker")
         self._clock = clock
-        self._lock = threading.Lock()
-        self._watches: dict[str, Stopwatch] = {}
-        self._faces: dict[str, _Face] = {}
-        self._ticker = Ticker(interval, self.tick, "stopwatch-ticker")
-
-    # --- registry
 
     def running(self, context: str) -> bool:
         with self._lock:
-            watch = self._watches.get(context)
+            watch = self._items.get(context)
             return watch is not None and watch.running
 
     def elapsed(self, context: str) -> float:
         with self._lock:
-            watch = self._watches.get(context)
+            watch = self._items.get(context)
             return 0.0 if watch is None else watch.elapsed()
-
-    def tracked(self, context: str) -> bool:
-        with self._lock:
-            return context in self._faces
-
-    def clear(self) -> None:
-        with self._lock:
-            self._watches.clear()
-            self._faces.clear()
 
     def _watch_for(self, context: str) -> Stopwatch:
         """The key's stopwatch, created stopped on first use. Call with the lock held."""
-        watch = self._watches.get(context)
+        watch = self._items.get(context)
         if watch is None:
-            watch = self._watches[context] = Stopwatch(self._clock)
+            watch = self._items[context] = Stopwatch(self._clock)
         return watch
 
     def toggle(self, context: str) -> bool:
@@ -79,62 +55,27 @@ class Stopwatches:
 
     def reset(self, context: str) -> None:
         with self._lock:
-            watch = self._watches.get(context)
+            watch = self._items.get(context)
             if watch is not None:
                 watch.reset()
         self._paint_key(context)
 
-    # --- keys
+    def _prepare(self, ctx: CardContext) -> None:
+        self._watch_for(ctx.context)
 
-    def track(self, ctx: CardContext, paint: bool = True) -> _Face:
-        """A key appeared: keep its stopwatch and repaint."""
-        with self._lock:
-            self._watch_for(ctx.context)
-            face = self._faces.get(ctx.context)
-            if face is None:
-                face = self._faces[ctx.context] = _Face(ctx)
-            face.ctx = ctx
-        if paint:
-            self.paint(face)
-        return face
+    def _snapshot(self, ctx: CardContext) -> float:
+        watch = self._items.get(ctx.context)
+        return 0.0 if watch is None else watch.elapsed()
 
-    def untrack(self, ctx: CardContext) -> None:
-        with self._lock:
-            self._faces.pop(ctx.context, None)
-
-    def paint(self, face: _Face) -> None:
-        """Draw the key; the time is read inside the key's lock so the newest paint shows the newest time."""
-        with face.lock:
-            with self._lock:
-                watch = self._watches.get(face.ctx.context)
-                elapsed = 0.0 if watch is None else watch.elapsed()
-            with face.ctx.canvas.paint() as img:
-                img.paste((0, 0, 0, 0), (0, 0, *img.size))
-                draw_time(img, fmt_ms(elapsed))
-
-    def _paint_key(self, context: str) -> None:
-        with self._lock:
-            face = self._faces.get(context)
-        if face is not None:
-            self.paint(face)
-
-    # --- ticking
+    def _draw(self, img: Any, settings: dict[str, Any], snapshot: float) -> None:
+        draw_time(img, fmt_ms(snapshot))
 
     def tick(self) -> None:
         """Repaint the running keys; safe to call from any thread."""
         with self._lock:
-            faces = [f for c, f in self._faces.items() if c in self._watches and self._watches[c].running]
+            faces = [f for c, f in self._faces.items() if c in self._items and self._items[c].running]
         for face in faces:
             self.paint(face)
-
-    def start_ticker(self) -> None:
-        self._ticker.start()
-
-    def stop(self) -> None:
-        self._ticker.stop()
-
-    def ticker_alive(self) -> bool:
-        return self._ticker.alive()
 
 
 _watches = Stopwatches()
