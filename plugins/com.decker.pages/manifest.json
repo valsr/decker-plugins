@@ -2,7 +2,7 @@
   "format": 3,
   "id": "com.decker.pages",
   "name": "Pages",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "author": "Decker",
   "description": "Keys for moving between a device's pages.",
   "homepage": "https://github.com/valsr/decker-plugins",
@@ -14,75 +14,6 @@
     "entry": "plugin.py"
   },
   "contributes": {
-    "cards": [
-      {
-        "id": "com.decker.pages.next",
-        "name": "Next page",
-        "tooltip": "Go to the next page",
-        "icon": "icons/pages",
-        "appearance": {
-          "background": "#000000"
-        },
-        "settings": [
-          {
-            "key": "color",
-            "type": "color",
-            "label": "Icon colour",
-            "default": "#ffffff",
-            "alpha": true
-          }
-        ],
-        "bindings": {
-          "press": {
-            "action": "com.decker.pages.next",
-            "args": {
-              "wrap": false
-            }
-          }
-        }
-      },
-      {
-        "id": "com.decker.pages.previous",
-        "name": "Previous page",
-        "tooltip": "Go to the previous page",
-        "icon": "icons/pages",
-        "appearance": {
-          "background": "#000000"
-        },
-        "settings": [
-          {
-            "key": "color",
-            "type": "color",
-            "label": "Icon colour",
-            "default": "#ffffff",
-            "alpha": true
-          }
-        ],
-        "bindings": {
-          "press": {
-            "action": "com.decker.pages.previous",
-            "args": {
-              "wrap": false
-            }
-          }
-        }
-      },
-      {
-        "id": "com.decker.pages.goto",
-        "name": "Go to page",
-        "tooltip": "Go to a chosen page, in this or another profile",
-        "icon": "icons/pages",
-        "appearance": {
-          "background": "#000000"
-        },
-        "bindings": {
-          "press": {
-            "action": "com.decker.pages.goto",
-            "args": {}
-          }
-        }
-      }
-    ],
     "actions": [
       {
         "id": "com.decker.pages.next",

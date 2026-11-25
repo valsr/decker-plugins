@@ -55,7 +55,8 @@ Up, Deck Brightness Down, Sleep, Timer and Stopwatch.
 - Sleep: press sleeps now (or cancels a running countdown), double press sleeps in 1 minute, long press in 10.
 - Timer (minutes, seconds, progress circle or bar, solid, two-colour or gradient) and Stopwatch: press starts or pauses,
   double or long press resets.
-- Counter, Page and Profile cards offer the same functions as the standalone Counter, Pages and Profiles plugins.
+- Counter, Page and Profile cards offer the same functions as the standalone Counter and the Pages and Profiles actions.
+  Pages and Profiles (3.0.0) ship global actions only (`next`, `previous`, `goto`) and no cards.
 
 Global actions: `brightness`, `deck-brightness`, `sleep`, `lock`, `page`, `profile` and `sleep-cancel` (cancels every
 running Sleep countdown; countdowns keep running when their key is removed or its page is left). Plugin-scoped actions
@@ -100,7 +101,7 @@ Owner and repository come from `GITHUB_REPOSITORY` in CI and default to `valsr/d
     ([run 44573274250](https://github.com/valsr/decker-plugins/actions/runs/44573274250), head `992532b`) was green on
     `ubuntu-latest`, `windows-latest`, `macos-latest` and in `fedora:latest` and `archlinux:latest` containers. On each
     it ran the tool tests (33 passed) and the
-    plugin suites (counter 19, pages 36, profiles 30 passed) against the pinned Decker,
+    plugin suites (counter 19, pages 13, profiles 15 passed) against the pinned Decker,
     including Counter's font path with the bundled DejaVu Sans Bold. Plugin packaging runs on Linux only. CI does not
     cover a real Stream Deck, the real Decker UI, or a real plugin process under the Decker supervisor on any OS.
 [^2]: Since 1.1.0 Counter draws with Decker's bundled DejaVu Sans Bold through the SDK (`decker_plugin_sdk.fonts`) on
